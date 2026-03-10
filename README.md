@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GitYAB
 
-## Getting Started
+**YAB -- You Ain't Better.** A rival analysis tool for GitHub developers. Compare your stats against competitors and prove who codes harder.
 
-First, run the development server:
+## Features
+
+- **Dashboard** -- stat cards and comparison bar charts for your key GitHub metrics
+- **Activity Feed** -- timeline of your rivals' recent GitHub events (commits, PRs, issues, stars) with commit messages, branch names, and PR titles
+- **Compare** -- sortable table ranking all developers by any metric, with diff badges showing where you lead or trail
+- **Leaderboard** -- ranked view showing defeated rivals, your current target, and the gap to overtake them
+- **Caching** -- stats cached locally for 10 minutes, events for 5 minutes. Manual rescan and auto-rescan toggle available
+- **Rival Toggles** -- show/hide individual rivals from all charts and views via the right panel
+
+## Setup
+
+### 1. Create a GitHub Personal Access Token
+
+1. Go to [github.com/settings/tokens/new](https://github.com/settings/tokens/new)
+2. Select **Classic** token
+3. Give it a name (e.g. "gityab")
+4. Set expiration to your preference
+5. Select the `read:user` scope (minimum required)
+6. Optionally select `repo` if you want private repo data included
+7. Click **Generate token** and copy it
+
+### 2. Run the app
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Configure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+On first visit, the setup modal will ask for:
 
-## Learn More
+- **GitHub Username** -- your GitHub handle (e.g. `torvalds`)
+- **Personal Access Token** -- the token you just created
 
-To learn more about Next.js, take a look at the following resources:
+Both are stored in your browser's `localStorage`. Nothing is sent to any server other than GitHub's API.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+After setup, add rival usernames from the right panel to start comparing.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Data & Rate Limits
 
-## Deploy on Vercel
+- Uses the GitHub **GraphQL API** for user stats and the **REST API** for events
+- With a PAT you get 5,000 requests/hour for each API
+- Default 10-minute rescan interval with ~6 rivals uses roughly 36 stats queries + 36 event queries per hour (well within limits)
+- The auto-rescan toggle in the left sidebar enables automatic background refreshes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tech Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js](https://nextjs.org) 16
+- [Zustand](https://github.com/pmndrs/zustand) for state management
+- [Recharts](https://recharts.org) for charts
+- [Lucide](https://lucide.dev) for icons
+- [Tailwind CSS](https://tailwindcss.com) v4
+
+## Build
+
+```bash
+npm run build
+npm start
+```
