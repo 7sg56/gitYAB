@@ -1,8 +1,10 @@
 'use client';
 
 import { useGitStore } from '@/store/useGitStore';
-import { Github, LayoutDashboard, Activity, Swords, Crosshair, LogOut, RefreshCw, Timer } from 'lucide-react';
+import { useGitHubStats } from '@/hooks/useGitHubStats';
+import { Github, LayoutDashboard, Activity, Swords, Crosshair, LogOut, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useMemo } from 'react';
 
 export function Sidebar() {
     const {
@@ -14,6 +16,11 @@ export function Sidebar() {
         setAutoRescanEnabled,
         lastScanTimestamp,
     } = useGitStore();
+
+    // Fetch main user stats for avatar
+    const users = useMemo(() => (mainUser ? [mainUser] : []), [mainUser]);
+    const { data } = useGitHubStats(users);
+    const mainStats = data[mainUser];
 
     const navItems = [
         { id: 'home' as const, label: 'Overview', icon: LayoutDashboard },
@@ -94,10 +101,21 @@ export function Sidebar() {
             {mainUser && (
                 <div className="border-t border-border p-3 space-y-1">
                     <div className="flex items-center gap-2.5 px-3 py-2">
-                        <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-[11px] font-medium text-foreground">
-                            {mainUser.charAt(0).toUpperCase()}
+                        {mainStats?.avatarUrl ? (
+                            <img
+                                src={mainStats.avatarUrl}
+                                alt={mainUser}
+                                className="w-7 h-7 rounded-full"
+                            />
+                        ) : (
+                            <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center text-[11px] font-medium text-foreground">
+                                {mainUser.charAt(0).toUpperCase()}
+                            </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                            <span className="text-sm text-foreground truncate block">{mainStats?.name || mainUser}</span>
+                            <span className="text-[11px] text-muted-foreground truncate block">@{mainUser}</span>
                         </div>
-                        <span className="text-sm text-foreground truncate flex-1">{mainUser}</span>
                     </div>
                     <button
                         onClick={clearState}

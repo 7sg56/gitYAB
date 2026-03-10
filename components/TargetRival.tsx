@@ -3,7 +3,16 @@
 import { useGitStore } from '@/store/useGitStore';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
 import { useMemo } from 'react';
-import { Crosshair, Trophy, ArrowUp } from 'lucide-react';
+import { Trophy, ArrowUp, Check, Crosshair } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface RivalRanking {
+    login: string;
+    name: string;
+    avatarUrl: string;
+    score: number;
+    status: 'defeated' | 'target' | 'above';
+}
 
 export function TargetRival() {
     const { mainUser, rivals, enabledRivals } = useGitStore();
@@ -11,33 +20,46 @@ export function TargetRival() {
     const allUsers = useMemo(() => [mainUser, ...activeRivals].filter(Boolean), [mainUser, activeRivals]);
     const { data, loading } = useGitHubStats(allUsers);
 
-    const targetInfo = useMemo(() => {
+    const leaderboard = useMemo(() => {
         if (!data[mainUser]) return null;
         const mainStat = data[mainUser]!;
         const mainScore = mainStat.totalCommitsYear + mainStat.totalPRsYear;
 
-        let currentTarget = null;
-        let minDiff = Infinity;
+        const rivalScores: RivalRanking[] = activeRivals
+            .filter((r) => data[r])
+            .map((r) => {
+                const s = data[r]!;
+                const score = s.totalCommitsYear + s.totalPRsYear;
+                return {
+                    login: s.login,
+                    name: s.name || s.login,
+                    avatarUrl: s.avatarUrl,
+                    score,
+                    status: score > mainScore ? 'above' as const : 'defeated' as const,
+                };
+            })
+            .sort((a, b) => b.score - a.score);
 
-        for (const rival of activeRivals) {
-            const rStat = data[rival];
-            if (!rStat) continue;
-            const rScore = rStat.totalCommitsYear + rStat.totalPRsYear;
-            if (rScore > mainScore) {
-                const diff = rScore - mainScore;
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    currentTarget = rStat;
-                }
-            }
+        // Find the immediate target (lowest score above you)
+        const aboveRivals = rivalScores.filter((r) => r.status === 'above');
+        if (aboveRivals.length > 0) {
+            const immediateTarget = aboveRivals[aboveRivals.length - 1];
+            immediateTarget.status = 'target';
         }
 
-        if (!currentTarget) return { isWinner: true, mainScore };
+        // Find user's position
+        const userPosition = rivalScores.filter((r) => r.score > mainScore).length + 1;
+
         return {
-            target: currentTarget,
-            gap: minDiff,
+            rankings: rivalScores,
             mainScore,
-            targetScore: currentTarget.totalCommitsYear + currentTarget.totalPRsYear,
+            mainName: mainStat.name || mainUser,
+            mainAvatar: mainStat.avatarUrl,
+            userPosition,
+            totalPlayers: rivalScores.length + 1,
+            isOnTop: aboveRivals.length === 0,
+            target: aboveRivals.length > 0 ? aboveRivals[aboveRivals.length - 1] : null,
+            gap: aboveRivals.length > 0 ? aboveRivals[aboveRivals.length - 1].score - mainScore : 0,
         };
     }, [data, mainUser, activeRivals]);
 
@@ -50,7 +72,7 @@ export function TargetRival() {
         );
     }
 
-    if (loading || !data[mainUser]) {
+    if (loading || !leaderboard) {
         return (
             <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-4">
                 <div className="h-8 w-48 bg-card rounded animate-pulse" />
@@ -62,68 +84,118 @@ export function TargetRival() {
     return (
         <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
             <div>
-                <h1 className="text-xl font-semibold text-foreground">Next Target</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">The rival immediately above you.</p>
+                <h1 className="text-xl font-semibold text-foreground">Leaderboard</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                    You are ranked #{leaderboard.userPosition} of {leaderboard.totalPlayers}. Score = commits + PRs (past year).
+                </p>
             </div>
 
-            {targetInfo?.isWinner ? (
-                <div className="bg-card border border-border rounded-lg p-8 text-center space-y-4">
-                    <Trophy size={40} className="mx-auto text-warning" />
-                    <h2 className="text-lg font-semibold text-foreground">You are on top</h2>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                        None of your enabled rivals have a higher combined commit + PR score. Keep it up.
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                        Your score: <span className="text-foreground font-medium">{targetInfo.mainScore.toLocaleString()}</span>
-                    </p>
+            {/* Target banner */}
+            {leaderboard.isOnTop ? (
+                <div className="bg-card border border-border rounded-lg p-5 flex items-center gap-4">
+                    <Trophy size={28} className="text-warning shrink-0" />
+                    <div>
+                        <p className="text-sm font-medium text-foreground">You are on top of all your rivals.</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            Score: {leaderboard.mainScore.toLocaleString()} -- No one to overtake.
+                        </p>
+                    </div>
                 </div>
-            ) : targetInfo?.target ? (
-                <div className="bg-card border border-border rounded-lg overflow-hidden">
-                    {/* Target header */}
-                    <div className="p-6 flex items-center gap-4 border-b border-border">
-                        <img
-                            src={targetInfo.target.avatarUrl}
-                            alt={targetInfo.target.login}
-                            className="w-14 h-14 rounded-full"
-                        />
-                        <div>
-                            <h2 className="text-lg font-semibold text-foreground">{targetInfo.target.name}</h2>
-                            <p className="text-sm text-muted-foreground">@{targetInfo.target.login}</p>
-                        </div>
-                        <div className="ml-auto">
-                            <span className="text-[11px] font-medium uppercase tracking-wider px-2 py-1 rounded-md bg-danger/10 text-danger">
-                                target
+            ) : leaderboard.target && (
+                <div className="bg-card border border-danger/30 rounded-lg p-5 flex items-center gap-4">
+                    <img src={leaderboard.target.avatarUrl} alt={leaderboard.target.login} className="w-10 h-10 rounded-full shrink-0" />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                            Current target: <span className="text-danger">{leaderboard.target.name}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            Their score: {leaderboard.target.score.toLocaleString()} --
+                            Gap: <span className="text-danger font-medium">{leaderboard.gap.toLocaleString()}</span> commits + PRs to overtake
+                        </p>
+                    </div>
+                    <ArrowUp size={16} className="text-danger shrink-0" />
+                </div>
+            )}
+
+            {/* Leaderboard table */}
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+                <div className="px-5 py-3 border-b border-border bg-accent/30">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Rankings</p>
+                </div>
+
+                <div className="divide-y divide-border">
+                    {leaderboard.rankings.map((rival, i) => {
+                        const rank = i + (rival.status === 'defeated' || rival.status === 'target' ? 1 : 0);
+                        // Insert current user row before defeated rivals
+                        const showUserBefore = i === 0
+                            ? rival.status === 'defeated'
+                            : leaderboard.rankings[i - 1]?.status !== 'defeated' && rival.status === 'defeated';
+
+                        return (
+                            <div key={rival.login}>
+                                {showUserBefore && (
+                                    <div className="flex items-center gap-4 px-5 py-3.5 bg-primary/5 border-l-2 border-l-primary">
+                                        <span className="text-xs font-mono text-muted-foreground w-6 text-center tabular-nums">
+                                            #{leaderboard.userPosition}
+                                        </span>
+                                        <img src={leaderboard.mainAvatar} alt={mainUser} className="w-7 h-7 rounded-full" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-foreground">{leaderboard.mainName}</p>
+                                            <p className="text-[11px] text-primary">you</p>
+                                        </div>
+                                        <span className="text-sm font-semibold text-foreground tabular-nums">
+                                            {leaderboard.mainScore.toLocaleString()}
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className={cn(
+                                    "flex items-center gap-4 px-5 py-3.5 transition-colors",
+                                    rival.status === 'target' && "bg-danger/5",
+                                    rival.status === 'defeated' && "opacity-60",
+                                )}>
+                                    <span className="text-xs font-mono text-muted-foreground w-6 text-center tabular-nums">
+                                        #{i + (leaderboard.userPosition <= i + 1 ? 2 : 1)}
+                                    </span>
+                                    <img src={rival.avatarUrl} alt={rival.login} className="w-7 h-7 rounded-full" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-foreground">{rival.name}</p>
+                                        <p className="text-[11px] text-muted-foreground">@{rival.login}</p>
+                                    </div>
+                                    {rival.status === 'target' && (
+                                        <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-danger/10 text-danger">
+                                            next
+                                        </span>
+                                    )}
+                                    {rival.status === 'defeated' && (
+                                        <Check size={14} className="text-success" />
+                                    )}
+                                    <span className="text-sm font-semibold text-foreground tabular-nums">
+                                        {rival.score.toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {/* User row at bottom if they're the lowest */}
+                    {leaderboard.rankings.every((r) => r.status !== 'defeated') && (
+                        <div className="flex items-center gap-4 px-5 py-3.5 bg-primary/5 border-l-2 border-l-primary">
+                            <span className="text-xs font-mono text-muted-foreground w-6 text-center tabular-nums">
+                                #{leaderboard.userPosition}
+                            </span>
+                            <img src={leaderboard.mainAvatar} alt={mainUser} className="w-7 h-7 rounded-full" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground">{leaderboard.mainName}</p>
+                                <p className="text-[11px] text-primary">you</p>
+                            </div>
+                            <span className="text-sm font-semibold text-foreground tabular-nums">
+                                {leaderboard.mainScore.toLocaleString()}
                             </span>
                         </div>
-                    </div>
-
-                    {/* Score comparison */}
-                    <div className="grid grid-cols-2 divide-x divide-border">
-                        <div className="p-5 text-center">
-                            <p className="text-xs text-muted-foreground mb-1">Their score</p>
-                            <p className="text-2xl font-semibold text-foreground tabular-nums">
-                                {targetInfo.targetScore?.toLocaleString()}
-                            </p>
-                        </div>
-                        <div className="p-5 text-center">
-                            <p className="text-xs text-muted-foreground mb-1">Your score</p>
-                            <p className="text-2xl font-semibold text-foreground tabular-nums">
-                                {targetInfo.mainScore?.toLocaleString()}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Gap */}
-                    <div className="p-5 border-t border-border bg-accent/30 text-center">
-                        <div className="flex items-center justify-center gap-2 text-sm">
-                            <ArrowUp size={14} className="text-danger" />
-                            <span className="text-muted-foreground">Gap:</span>
-                            <span className="font-semibold text-danger">{targetInfo.gap.toLocaleString()}</span>
-                            <span className="text-muted-foreground">commits + PRs to overtake</span>
-                        </div>
-                    </div>
+                    )}
                 </div>
-            ) : null}
+            </div>
         </div>
     );
 }

@@ -2,14 +2,14 @@
 
 import { useGitStore } from '@/store/useGitStore';
 import { useGitHubEvents } from '@/hooks/useGitHubEvents';
-import { GitCommit, GitPullRequest, CircleDot, GitBranch, Star, Activity, RefreshCw } from 'lucide-react';
+import { GitCommit, GitPullRequest, CircleDot, GitBranch, Star, Activity, RefreshCw, GitFork, MessageSquare } from 'lucide-react';
 
 function timeAgo(dateStr: string): string {
     const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (diff < 60) return `${diff}s`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-    return `${Math.floor(diff / 86400)}d`;
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
 }
 
 export function Feed() {
@@ -46,7 +46,7 @@ export function Feed() {
             {loading && events.length === 0 ? (
                 <div className="space-y-3">
                     {[...Array(5)].map((_, i) => (
-                        <div key={i} className="h-16 bg-card border border-border rounded-lg animate-pulse" />
+                        <div key={i} className="h-20 bg-card border border-border rounded-lg animate-pulse" />
                     ))}
                 </div>
             ) : events.length === 0 ? (
@@ -54,86 +54,220 @@ export function Feed() {
                     <p className="text-sm text-muted-foreground">No recent activity found.</p>
                 </div>
             ) : (
-                <div className="relative">
-                    {/* Timeline line */}
-                    <div className="absolute left-[19px] top-0 bottom-0 w-px bg-border" />
-
-                    <div className="space-y-0">
-                        {events.map((event) => {
-                            const { icon, color, text } = getEventInfo(event);
-                            return (
-                                <div key={event.id} className="relative flex gap-3 py-2.5 pl-0">
-                                    {/* Timeline dot */}
-                                    <div className={`relative z-10 w-[38px] h-[38px] shrink-0 flex items-center justify-center rounded-full bg-background border border-border ${color}`}>
-                                        {icon}
-                                    </div>
-
-                                    <div className="flex-1 min-w-0 pt-1.5">
-                                        <p className="text-sm text-foreground">
-                                            <span className="font-medium">{event.actor.login}</span>
-                                            <span className="text-muted-foreground"> {text} </span>
-                                            <a
-                                                href={`https://github.com/${event.repo.name}`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="text-primary hover:underline"
-                                            >
-                                                {event.repo.name}
-                                            </a>
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">
-                                            {timeAgo(event.created_at)} ago
-                                        </p>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
+                    {events.map((event) => (
+                        <EventItem key={event.id} event={event} />
+                    ))}
                 </div>
             )}
         </div>
     );
 }
 
-function getEventInfo(event: any) {
+function EventItem({ event }: { event: any }) {
+    const info = getEventDetail(event);
+
+    return (
+        <div className="flex gap-3 px-4 py-3.5 hover:bg-accent/30 transition-colors">
+            {/* Avatar */}
+            <img
+                src={event.actor.avatar_url}
+                alt={event.actor.login}
+                className="w-8 h-8 rounded-full mt-0.5 shrink-0"
+            />
+
+            <div className="flex-1 min-w-0">
+                {/* Main action line */}
+                <p className="text-sm text-foreground leading-snug">
+                    <a
+                        href={`https://github.com/${event.actor.login}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium hover:text-primary transition-colors"
+                    >
+                        {event.actor.login}
+                    </a>
+                    <span className="text-muted-foreground"> {info.action} </span>
+                    <a
+                        href={`https://github.com/${event.repo.name}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline"
+                    >
+                        {event.repo.name}
+                    </a>
+                </p>
+
+                {/* Detail section */}
+                {info.details && info.details.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                        {info.details.map((detail: string, i: number) => (
+                            <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                                <span className="text-muted-foreground/50 mt-0.5 shrink-0">{info.detailIcon}</span>
+                                <span className="truncate">{detail}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* PR/Issue title */}
+                {info.title && (
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                            {info.statusIcon}
+                            {info.title}
+                        </span>
+                    </p>
+                )}
+
+                {/* Timestamp */}
+                <p className="text-[11px] text-muted-foreground/60 mt-1.5">{timeAgo(event.created_at)}</p>
+            </div>
+
+            {/* Event type icon */}
+            <div className={`shrink-0 mt-0.5 ${info.color}`}>
+                {info.icon}
+            </div>
+        </div>
+    );
+}
+
+function timeAgoInline(dateStr: string): string {
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function getEventDetail(event: any) {
     switch (event.type) {
         case 'PushEvent': {
-            const count = event.payload.commits?.length || 0;
+            const commits = event.payload.commits || [];
+            const branch = event.payload.ref?.replace('refs/heads/', '') || 'unknown';
+            const count = commits.length;
             return {
                 icon: <GitCommit size={16} />,
                 color: 'text-primary',
-                text: `pushed ${count} commit${count === 1 ? '' : 's'} to`,
+                action: `pushed ${count} commit${count === 1 ? '' : 's'} to ${branch} in`,
+                details: commits.slice(0, 3).map((c: any) => `${c.sha?.slice(0, 7)} ${c.message?.split('\n')[0] || ''}`),
+                detailIcon: '\u2022',
+                title: count > 3 ? `... and ${count - 3} more commit${count - 3 === 1 ? '' : 's'}` : null,
+                statusIcon: null,
             };
         }
-        case 'PullRequestEvent':
+        case 'PullRequestEvent': {
+            const pr = event.payload.pull_request;
+            const action = event.payload.action;
+            const merged = pr?.merged;
+            let statusColor = 'text-success';
+            let statusLabel = 'opened';
+            if (action === 'closed' && merged) {
+                statusColor = 'text-[#a371f7]';
+                statusLabel = 'merged';
+            } else if (action === 'closed') {
+                statusColor = 'text-danger';
+                statusLabel = 'closed';
+            } else {
+                statusLabel = action;
+            }
             return {
                 icon: <GitPullRequest size={16} />,
-                color: event.payload.action === 'closed' ? 'text-[#bc8cff]' : 'text-success',
-                text: `${event.payload.action} a PR in`,
+                color: statusColor,
+                action: `${statusLabel} a pull request in`,
+                details: null,
+                detailIcon: null,
+                title: pr?.title || null,
+                statusIcon: <span className={`inline-block w-2 h-2 rounded-full ${statusColor === 'text-success' ? 'bg-success' : statusColor === 'text-danger' ? 'bg-danger' : 'bg-[#a371f7]'} mr-1`} />,
             };
-        case 'IssuesEvent':
+        }
+        case 'IssuesEvent': {
+            const issue = event.payload.issue;
+            const action = event.payload.action;
             return {
                 icon: <CircleDot size={16} />,
-                color: event.payload.action === 'closed' ? 'text-[#bc8cff]' : 'text-success',
-                text: `${event.payload.action} an issue in`,
+                color: action === 'closed' ? 'text-[#a371f7]' : 'text-success',
+                action: `${action} an issue in`,
+                details: null,
+                detailIcon: null,
+                title: issue?.title || null,
+                statusIcon: <span className={`inline-block w-2 h-2 rounded-full ${action === 'closed' ? 'bg-[#a371f7]' : 'bg-success'} mr-1`} />,
             };
-        case 'CreateEvent':
+        }
+        case 'IssueCommentEvent': {
+            const issue = event.payload.issue;
+            return {
+                icon: <MessageSquare size={16} />,
+                color: 'text-muted-foreground',
+                action: 'commented on an issue in',
+                details: null,
+                detailIcon: null,
+                title: issue?.title || null,
+                statusIcon: null,
+            };
+        }
+        case 'CreateEvent': {
+            const refType = event.payload.ref_type;
+            const ref = event.payload.ref;
             return {
                 icon: <GitBranch size={16} />,
                 color: 'text-primary',
-                text: `created a ${event.payload.ref_type} in`,
+                action: `created ${refType}${ref ? ` ${ref}` : ''} in`,
+                details: null,
+                detailIcon: null,
+                title: event.payload.description || null,
+                statusIcon: null,
+            };
+        }
+        case 'ForkEvent':
+            return {
+                icon: <GitFork size={16} />,
+                color: 'text-muted-foreground',
+                action: 'forked',
+                details: null,
+                detailIcon: null,
+                title: null,
+                statusIcon: null,
             };
         case 'WatchEvent':
             return {
                 icon: <Star size={16} />,
                 color: 'text-warning',
-                text: 'starred',
+                action: 'starred',
+                details: null,
+                detailIcon: null,
+                title: null,
+                statusIcon: null,
+            };
+        case 'DeleteEvent':
+            return {
+                icon: <GitBranch size={16} />,
+                color: 'text-danger',
+                action: `deleted ${event.payload.ref_type} ${event.payload.ref || ''} in`,
+                details: null,
+                detailIcon: null,
+                title: null,
+                statusIcon: null,
+            };
+        case 'PullRequestReviewEvent':
+            return {
+                icon: <GitPullRequest size={16} />,
+                color: 'text-[#a371f7]',
+                action: `reviewed a pull request in`,
+                details: null,
+                detailIcon: null,
+                title: event.payload.pull_request?.title || null,
+                statusIcon: null,
             };
         default:
             return {
                 icon: <Activity size={16} />,
                 color: 'text-muted-foreground',
-                text: 'interacted with',
+                action: 'interacted with',
+                details: null,
+                detailIcon: null,
+                title: null,
+                statusIcon: null,
             };
     }
 }
