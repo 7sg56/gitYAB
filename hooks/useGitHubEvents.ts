@@ -1,42 +1,49 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchGitHubEvents, GitHubEvent } from '@/lib/github';
 import { useGitStore } from '@/store/useGitStore';
+import { getCache, setCache, getCacheKey, clearCache, EVENTS_TTL } from '@/lib/cache';
 
 export function useGitHubEvents(usernames: string[]) {
     const { pat } = useGitStore();
     const [events, setEvents] = useState<GitHubEvent[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
+    const fetchData = useCallback(async (forceRefresh = false) => {
         if (!pat || usernames.length === 0) {
             setEvents([]);
-            setLoading(false);
             return;
         }
 
-        let isMounted = true;
         setLoading(true);
 
-        const fetchData = async () => {
-            const promises = usernames.map((username) => fetchGitHubEvents(username, pat));
-            const results = await Promise.all(promises);
-
-            if (isMounted) {
-                // Flatten and sort by date descending
-                const allEvents = results.flat().sort((a, b) => {
-                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                });
-                setEvents(allEvents);
-                setLoading(false);
+        const promises = usernames.map(async (username) => {
+            if (!forceRefresh) {
+                const cached = getCache<GitHubEvent[]>(getCacheKey('events', username));
+                if (cached) return cached.data;
             }
-        };
 
-        fetchData();
+            const result = await fetchGitHubEvents(username, pat);
+            setCache(getCacheKey('events', username), result, EVENTS_TTL);
+            return result;
+        });
 
-        return () => {
-            isMounted = false;
-        };
+        const results = await Promise.all(promises);
+        const allEvents = results.flat().sort((a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
+        setEvents(allEvents);
+        setLoading(false);
     }, [usernames.join(','), pat]);
 
-    return { events, loading };
+    const rescan = useCallback(() => {
+        clearCache('events');
+        fetchData(true);
+    }, [fetchData]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    return { events, loading, rescan };
 }
