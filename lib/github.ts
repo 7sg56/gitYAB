@@ -80,11 +80,33 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
             return null;
         }
 
-        const json = await res.json();
+        const json = await res.json() as {
+            data?: {
+                user?: {
+                    name: string | null;
+                    login: string;
+                    avatarUrl: string;
+                    followers: { totalCount: number };
+                    repositories: {
+                        totalCount: number;
+                        nodes: Array<{
+                            stargazers: { totalCount: number };
+                        }>;
+                    };
+                    contributionsCollection: {
+                        totalCommitContributions: number;
+                        totalIssueContributions: number;
+                        totalPullRequestContributions: number;
+                        restrictedContributionsCount: number;
+                    };
+                } | null;
+            };
+            errors?: Array<{ type?: string; message?: string }>;
+        };
 
         if (json.errors) {
             console.error(`GraphQL Errors for ${username}:`, JSON.stringify(json.errors, null, 2));
-            if (json.errors[0]?.type === 'RATE_LIMITED' || json.errors.some((e: Record<string, unknown>) => typeof e.message === 'string' && e.message.toLowerCase().includes('rate limit'))) {
+            if (json.errors[0]?.type === 'RATE_LIMITED' || json.errors.some((e: { message?: string }) => typeof e.message === 'string' && e.message.toLowerCase().includes('rate limit'))) {
                 throw new Error('RATE_LIMIT');
             }
             // If we have data despite errors (partial success), we can continue, 
@@ -99,9 +121,8 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
         }
 
         const totalStars = user.repositories?.nodes?.reduce(
-            (acc: number, repo: Record<string, unknown>) => {
-                const stargazers = repo?.stargazers as Record<string, unknown> | undefined;
-                return acc + (typeof stargazers?.totalCount === 'number' ? stargazers.totalCount : 0);
+            (acc: number, repo: { stargazers: { totalCount: number } }) => {
+                return acc + repo.stargazers.totalCount;
             },
             0
         ) || 0;

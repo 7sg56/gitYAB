@@ -9,11 +9,9 @@ export function useGitHubStats(usernames: string[]) {
     const [loading, setLoading] = useState(false);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    const usernamesStr = usernames.join(',');
-
     const fetchData = useCallback(async (forceRefresh = false) => {
         await Promise.resolve();
-        const currentUsers = usernamesStr ? usernamesStr.split(',') : [];
+        const currentUsers = usernames;
         if (!pat || currentUsers.length === 0) return;
 
         setLoading(true);
@@ -24,7 +22,7 @@ export function useGitHubStats(usernames: string[]) {
 
         for (let i = 0; i < currentUsers.length; i += 3) {
             const batch = currentUsers.slice(i, i + 3);
-            await Promise.all(batch.map(async (username) => {
+            await Promise.all(batch.map(async (username: string) => {
                 if (!forceRefresh) {
                     const cached = getCache<GitHubUserStats>(getCacheKey('stats', username));
                     if (cached) {
@@ -66,7 +64,7 @@ export function useGitHubStats(usernames: string[]) {
         setData((prev) => ({ ...prev, ...results }));
         setLastScanTimestamp(Date.now());
         setLoading(false);
-    }, [usernamesStr, pat, setLastScanTimestamp, setApiError]);
+    }, [usernames, pat, setLastScanTimestamp, setApiError]);
 
     const rescan = useCallback(() => {
         clearCache('stats');
@@ -86,7 +84,7 @@ export function useGitHubStats(usernames: string[]) {
             intervalRef.current = null;
         }
 
-        if (autoRescanEnabled && pat && usernamesStr.length > 0) {
+        if (autoRescanEnabled && pat && usernames.length > 0) {
             intervalRef.current = setInterval(() => {
                 clearCache('stats');
                 fetchData(true);
@@ -98,7 +96,7 @@ export function useGitHubStats(usernames: string[]) {
                 clearInterval(intervalRef.current);
             }
         };
-    }, [autoRescanEnabled, autoRescanIntervalMs, fetchData, pat, usernamesStr]);
+    }, [autoRescanEnabled, autoRescanIntervalMs, fetchData, pat, usernames]);
 
     return { data, loading, rescan };
 }

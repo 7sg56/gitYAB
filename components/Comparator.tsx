@@ -5,6 +5,7 @@ import { useGitHubStats } from '@/hooks/useGitHubStats';
 import { useMemo, useState } from 'react';
 import { Swords, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const METRICS = [
     { key: 'totalCommitsYear', label: 'Commits', shortLabel: 'Commits' },
@@ -62,8 +63,9 @@ export function Comparator() {
                 aVal = a.name.toLowerCase();
                 bVal = b.name.toLowerCase();
             } else {
-                aVal = a[sortKey as keyof typeof a] as number || 0;
-                bVal = b[sortKey as keyof typeof b] as number || 0;
+                const key = sortKey as keyof typeof a;
+                aVal = (a[key] as number) || 0;
+                bVal = (b[key as keyof typeof b] as number) || 0;
             }
             if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
             if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
@@ -77,7 +79,7 @@ export function Comparator() {
     const maxPerMetric = useMemo(() => {
         const maxes: Record<string, number> = {};
         METRICS.forEach((m) => {
-            maxes[m.key] = Math.max(...rows.map((r) => r[m.key as keyof typeof r] as number || 0));
+            maxes[m.key] = Math.max(...rows.map((r) => (r[m.key as keyof typeof r] as number) || 0));
         });
         return maxes;
     }, [rows]);
@@ -159,7 +161,7 @@ export function Comparator() {
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-3">
                                         {row.avatarUrl ? (
-                                            <img src={row.avatarUrl} alt={row.login} className="w-6 h-6 rounded-full shrink-0" />
+                                            <Image src={row.avatarUrl} alt={row.login} width={24} height={24} className="rounded-full shrink-0" unoptimized />
                                         ) : (
                                             <div className="w-6 h-6 rounded-full bg-accent shrink-0" />
                                         )}
@@ -177,9 +179,9 @@ export function Comparator() {
                                     </div>
                                 </td>
                                 {METRICS.map((m) => {
-                                    const val = row[m.key as keyof typeof row] as number || 0;
+                                    const val = (row[m.key as keyof typeof row] as number) || 0;
                                     const isMax = val === maxPerMetric[m.key] && val > 0;
-                                    const mainVal = mainStats ? mainStats[m.key as keyof typeof mainStats] as number || 0 : 0;
+                                    const mainVal = mainStats ? (mainStats[m.key as keyof typeof mainStats] as number) || 0 : 0;
                                     const diff = row.isMain ? null : val - mainVal;
 
                                     return (

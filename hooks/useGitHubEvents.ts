@@ -8,10 +8,9 @@ export function useGitHubEvents(usernames: string[]) {
     const [events, setEvents] = useState<GitHubEvent[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const usernamesStr = usernames.join(',');
-
     const fetchData = useCallback(async (forceRefresh = false) => {
         await Promise.resolve();
+        const usernamesStr = usernames.join(',');
         const currentUsers = usernamesStr ? usernamesStr.split(',') : [];
         if (!pat || currentUsers.length === 0) {
             setEvents([]);
@@ -26,7 +25,7 @@ export function useGitHubEvents(usernames: string[]) {
 
         for (let i = 0; i < currentUsers.length; i += 3) {
             const batch = currentUsers.slice(i, i + 3);
-            const batchPromises = batch.map(async (username) => {
+            const batchPromises = batch.map(async (username: string) => {
                 if (!forceRefresh) {
                     const cached = getCache<GitHubEvent[]>(getCacheKey('events', username));
                     if (cached) return cached.data;
@@ -64,13 +63,13 @@ export function useGitHubEvents(usernames: string[]) {
         } else {
             setApiError(null);
         }
-        const allEvents = results.flat().sort((a, b) =>
+        const allEvents = results.flat().sort((a: GitHubEvent, b: GitHubEvent) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
 
         setEvents(allEvents);
         setLoading(false);
-    }, [usernamesStr, pat, setApiError]);
+    }, [usernames, pat, setApiError]);
 
     const rescan = useCallback(() => {
         clearCache('events');

@@ -5,6 +5,7 @@ import { useGitHubStats } from '@/hooks/useGitHubStats';
 import { Github, LayoutDashboard, Activity, Swords, Crosshair, LogOut, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMemo, useState, useEffect } from 'react';
+import Image from 'next/image';
 
 export function Sidebar() {
     const {
@@ -109,10 +110,13 @@ export function Sidebar() {
                 <div className="border-t border-border p-3 space-y-1">
                     <div className="flex items-center gap-2.5 px-3 py-2">
                         {mainStats?.avatarUrl ? (
-                            <img
+                            <Image
                                 src={mainStats.avatarUrl}
                                 alt={mainUser}
+                                width={28}
+                                height={28}
                                 className="w-7 h-7 rounded-full"
+                                unoptimized
                             />
                         ) : (
                             <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center text-[11px] font-medium text-foreground">

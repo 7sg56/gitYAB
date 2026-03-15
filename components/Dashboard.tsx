@@ -66,18 +66,15 @@ export function Dashboard() {
 
     // Find latest meaningful events
     const latestPush = events.find(e => e.type === 'PushEvent');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const latestPushPayload = latestPush?.payload as any;
+    const latestPushPayload = latestPush?.payload as Record<string, unknown>;
 
     const latestPR = events.find(e => e.type === 'PullRequestEvent');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const latestPRPayload = latestPR?.payload as any;
+    const latestPRPayload = latestPR?.payload as Record<string, unknown>;
 
     const latestIssue = events.find(e => e.type === 'IssuesEvent');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const latestIssuePayload = latestIssue?.payload as any;
+    const latestIssuePayload = latestIssue?.payload as Record<string, unknown>;
 
-    const latestCreateRepo = events.find(e => e.type === 'CreateEvent' && (e.payload as any)?.ref_type === 'repository');
+    const latestCreateRepo = events.find(e => e.type === 'CreateEvent' && typeof e.payload === 'object' && e.payload !== null && 'ref_type' in e.payload && e.payload.ref_type === 'repository');
 
     return (
         <div className="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
@@ -137,9 +134,9 @@ export function Dashboard() {
                                     >
                                         {latestPush.repo.name}
                                     </a>
-                                    {latestPushPayload?.commits?.[0] && (
+                                    {Array.isArray(latestPushPayload?.commits) && (latestPushPayload.commits as Record<string, unknown>[])[0] && (
                                         <p className="text-sm text-muted-foreground line-clamp-1">
-                                            {latestPushPayload.commits[0].message}
+                                            {String((latestPushPayload.commits as Record<string, unknown>[])[0].message ?? '')}
                                         </p>
                                     )}
                                 </div>
@@ -162,21 +159,21 @@ export function Dashboard() {
                             {latestPR && (
                                 <div className="mt-auto pt-4 border-t border-border/40">
                                     <div className="flex items-center justify-between gap-2 mb-2">
-                                        <span className={`text-xs font-medium flex items-center gap-1.5 ${latestPRPayload.action === 'closed' ? (latestPRPayload.pull_request?.merged ? 'text-purple-400' : 'text-red-400') : 'text-emerald-400'}`}>
+                                        <span className={`text-xs font-medium flex items-center gap-1.5 ${latestPRPayload?.action === 'closed' ? ((latestPRPayload?.pull_request as Record<string, unknown>)?.merged ? 'text-purple-400' : 'text-red-400') : 'text-emerald-400'}`}>
                                             <GitBranch size={14} />
-                                            {latestPRPayload.action === 'closed' ? (latestPRPayload.pull_request?.merged ? 'Merged' : 'Closed') : (latestPRPayload.action ? latestPRPayload.action.charAt(0).toUpperCase() + latestPRPayload.action.slice(1) : 'Opened')}
+                                            {latestPRPayload?.action === 'closed' ? ((latestPRPayload?.pull_request as Record<string, unknown>)?.merged ? 'Merged' : 'Closed') : (typeof latestPRPayload?.action === 'string' ? latestPRPayload.action.charAt(0).toUpperCase() + latestPRPayload.action.slice(1) : 'Opened')}
                                         </span>
                                         <span className="text-xs text-muted-foreground">
                                             {formatTimeAgo(latestPR.created_at)}
                                         </span>
                                     </div>
                                     <a
-                                        href={`https://github.com/${latestPR.repo.name}/pull/${latestPRPayload.number}`}
+                                        href={`https://github.com/${latestPR.repo.name}/pull/${latestPRPayload?.number}`}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="text-sm text-foreground hover:text-primary transition-colors line-clamp-2"
                                     >
-                                        {latestPRPayload.pull_request?.title || `Pull Request #${latestPRPayload.number || latestPRPayload.pull_request?.number}`}
+                                        {String((latestPRPayload?.pull_request as Record<string, unknown>)?.title ?? `Pull Request #${latestPRPayload?.number ?? (latestPRPayload?.pull_request as Record<string, unknown>)?.number ?? ''}`)}
                                     </a>
                                 </div>
                             )}
@@ -198,21 +195,21 @@ export function Dashboard() {
                             {latestIssue && (
                                 <div className="mt-auto pt-4 border-t border-border/40">
                                     <div className="flex items-center justify-between gap-2 mb-2">
-                                        <span className={`text-xs font-medium flex items-center gap-1.5 ${latestIssuePayload.action === 'closed' ? 'text-purple-400' : 'text-emerald-400'}`}>
-                                            {latestIssuePayload.action === 'closed' ? <CheckCircle2 size={14} /> : <CircleDot size={14} />}
-                                            {latestIssuePayload.action ? latestIssuePayload.action.charAt(0).toUpperCase() + latestIssuePayload.action.slice(1) : 'Opened'}
+                                        <span className={`text-xs font-medium flex items-center gap-1.5 ${latestIssuePayload?.action === 'closed' ? 'text-purple-400' : 'text-emerald-400'}`}>
+                                            {latestIssuePayload?.action === 'closed' ? <CheckCircle2 size={14} /> : <CircleDot size={14} />}
+                                            {typeof latestIssuePayload?.action === 'string' ? latestIssuePayload.action.charAt(0).toUpperCase() + latestIssuePayload.action.slice(1) : 'Opened'}
                                         </span>
                                         <span className="text-xs text-muted-foreground">
                                             {formatTimeAgo(latestIssue.created_at)}
                                         </span>
                                     </div>
                                     <a
-                                        href={`https://github.com/${latestIssue.repo.name}/issues/${latestIssuePayload.issue?.number}`}
+                                        href={`https://github.com/${latestIssue.repo.name}/issues/${(latestIssuePayload?.issue as Record<string, unknown>)?.number}`}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="text-sm text-foreground hover:text-primary transition-colors line-clamp-2"
                                     >
-                                        {latestIssuePayload.issue?.title || `Issue #${latestIssuePayload.issue?.number}`}
+                                        {String((latestIssuePayload?.issue as Record<string, unknown>)?.title ?? `Issue #${(latestIssuePayload?.issue as Record<string, unknown>)?.number ?? ''}`)}
                                     </a>
                                 </div>
                             )}
@@ -267,7 +264,7 @@ export function Dashboard() {
                 {activeRivals.length > 0 ? (
                     <>
                         {/* Contributions Chart */}
-                        <div className="md:col-span-12 lg:col-span-7 bg-card/40 border border-border/60 rounded-xl p-6 flex flex-col min-h-[380px]">
+                        <div className="md:col-span-12 lg:col-span-6 bg-card/40 border border-border/60 rounded-xl p-6 flex flex-col min-h-[380px]">
                             <h3 className="text-sm font-medium text-foreground mb-6 flex items-center gap-2">
                                 <Activity size={16} className="text-muted-foreground" />
                                 Contributions
@@ -287,7 +284,7 @@ export function Dashboard() {
                         </div>
 
                         {/* Popularity & Reach Chart */}
-                        <div className="md:col-span-12 lg:col-span-5 bg-card/40 border border-border/60 rounded-xl p-6 min-h-[380px] flex flex-col">
+                        <div className="md:col-span-12 lg:col-span-6 bg-card/40 border border-border/60 rounded-xl p-6 min-h-[380px] flex flex-col">
                             <h3 className="text-sm font-medium text-foreground mb-6 flex items-center gap-2">
                                 <Star size={16} className="text-muted-foreground" />
                                 Reach

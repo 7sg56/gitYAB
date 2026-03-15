@@ -5,6 +5,7 @@ import { useGitStore } from '@/store/useGitStore';
 import { Plus, X, Eye, EyeOff, Users, PanelRightClose, PanelRightOpen, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
+import Image from 'next/image';
 
 export function RivalsPanel() {
     const {
@@ -109,10 +110,13 @@ export function RivalsPanel() {
                                     )}
                                 >
                                     {stats?.avatarUrl ? (
-                                        <img
+                                        <Image
                                             src={stats.avatarUrl}
                                             alt={rival}
+                                            width={28}
+                                            height={28}
                                             className="w-7 h-7 rounded-full bg-accent"
+                                            unoptimized
                                         />
                                     ) : (
                                         <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center text-[11px] font-medium text-muted-foreground">

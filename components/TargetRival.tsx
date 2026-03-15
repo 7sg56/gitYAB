@@ -5,6 +5,7 @@ import { useGitHubStats } from '@/hooks/useGitHubStats';
 import { useMemo } from 'react';
 import { Trophy, ArrowUp, Check, Crosshair } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface RivalRanking {
     login: string;
@@ -103,7 +104,7 @@ export function TargetRival() {
                 </div>
             ) : leaderboard.target && (
                 <div className="bg-card border border-danger/30 rounded-lg p-5 flex items-center gap-4">
-                    <img src={leaderboard.target.avatarUrl} alt={leaderboard.target.login} className="w-10 h-10 rounded-full shrink-0" />
+                    <Image src={leaderboard.target.avatarUrl} alt={leaderboard.target.login} width={40} height={40} className="w-10 h-10 rounded-full shrink-0" unoptimized />
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground">
                             Current target: <span className="text-danger">{leaderboard.target.name}</span>
@@ -125,7 +126,6 @@ export function TargetRival() {
 
                 <div className="divide-y divide-border">
                     {leaderboard.rankings.map((rival, i) => {
-                        const rank = i + (rival.status === 'defeated' || rival.status === 'target' ? 1 : 0);
                         // Insert current user row before defeated rivals
                         const showUserBefore = i === 0
                             ? rival.status === 'defeated'
@@ -138,7 +138,7 @@ export function TargetRival() {
                                         <span className="text-xs font-mono text-muted-foreground w-6 text-center tabular-nums">
                                             #{leaderboard.userPosition}
                                         </span>
-                                        <img src={leaderboard.mainAvatar} alt={mainUser} className="w-7 h-7 rounded-full" />
+                                        <Image src={leaderboard.mainAvatar} alt={mainUser} width={28} height={28} className="w-7 h-7 rounded-full" unoptimized />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-medium text-foreground">{leaderboard.mainName}</p>
                                             <p className="text-[11px] text-primary">you</p>
@@ -157,7 +157,7 @@ export function TargetRival() {
                                     <span className="text-xs font-mono text-muted-foreground w-6 text-center tabular-nums">
                                         #{i + (leaderboard.userPosition <= i + 1 ? 2 : 1)}
                                     </span>
-                                    <img src={rival.avatarUrl} alt={rival.login} className="w-7 h-7 rounded-full" />
+                                    <Image src={rival.avatarUrl} alt={rival.login} width={28} height={28} className="w-7 h-7 rounded-full" unoptimized />
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-foreground">{rival.name}</p>
                                         <p className="text-[11px] text-muted-foreground">@{rival.login}</p>
@@ -184,7 +184,7 @@ export function TargetRival() {
                             <span className="text-xs font-mono text-muted-foreground w-6 text-center tabular-nums">
                                 #{leaderboard.userPosition}
                             </span>
-                            <img src={leaderboard.mainAvatar} alt={mainUser} className="w-7 h-7 rounded-full" />
+                            <Image src={leaderboard.mainAvatar} alt={mainUser} width={28} height={28} className="w-7 h-7 rounded-full" unoptimized />
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-foreground">{leaderboard.mainName}</p>
                                 <p className="text-[11px] text-primary">you</p>

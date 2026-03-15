@@ -5,6 +5,7 @@ import { useGitHubEvents } from '@/hooks/useGitHubEvents';
 import { formatTimeAgo } from '@/lib/utils';
 import { GitCommit, GitPullRequest, CircleDot, GitBranch, Star, Activity, RefreshCw, GitFork, MessageSquare } from 'lucide-react';
 import { GitHubEvent } from '@/lib/github';
+import Image from 'next/image';
 
 export function Feed() {
     const { rivals, enabledRivals } = useGitStore();
@@ -64,10 +65,13 @@ function EventItem({ event }: { event: GitHubEvent }) {
     return (
         <div className="flex gap-3 px-4 py-3.5 hover:bg-accent/30 transition-colors">
             {/* Avatar */}
-            <img
+            <Image
                 src={event.actor.avatar_url}
                 alt={event.actor.login}
-                className="w-8 h-8 rounded-full mt-0.5 shrink-0"
+                width={32}
+                height={32}
+                className="rounded-full mt-0.5 shrink-0"
+                unoptimized
             />
 
             <div className="flex-1 min-w-0">
@@ -95,7 +99,7 @@ function EventItem({ event }: { event: GitHubEvent }) {
                 {/* Detail section */}
                 {info.details && info.details.length > 0 && (
                     <div className="mt-2 space-y-1">
-                        {info.details.map((detail: string, i: number) => (
+                        {info.details.map((detail, i: number) => (
                             <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
                                 <span className="text-muted-foreground/50 mt-0.5 shrink-0">{info.detailIcon}</span>
                                 <span className="truncate">{detail}</span>
@@ -127,14 +131,13 @@ function EventItem({ event }: { event: GitHubEvent }) {
 }
 
 function getEventDetail(event: GitHubEvent) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const payload = event.payload as any;
+    const payload = event.payload as Record<string, unknown>;
 
     switch (event.type) {
         case 'PushEvent': {
-            const commits = payload.commits || [];
-            const branch = payload.ref?.replace('refs/heads/', '') || 'unknown';
-            const count = payload.size ?? commits.length;
+            const commits = (payload.commits as { sha?: string; message?: string }[]) || [];
+            const branch = typeof payload.ref === 'string' ? payload.ref.replace('refs/heads/', '') : 'unknown';
+            const count = (payload.size as number) ?? commits.length;
 
             if (count === 0) {
                 return {
@@ -152,15 +155,15 @@ function getEventDetail(event: GitHubEvent) {
                 icon: <GitCommit size={16} />,
                 color: 'text-primary',
                 action: `pushed ${count} commit${count === 1 ? '' : 's'} to ${branch} in`,
-                details: commits.slice(0, 3).map((c: { sha?: string, message?: string }) => `${c.sha?.slice(0, 7)} ${c.message?.split('\n')[0] || ''}`),
+                details: commits.slice(0, 3).map((c) => `${c.sha?.slice(0, 7)} ${c.message?.split('\n')[0] || ''}`),
                 detailIcon: '\u2022',
                 title: count > 3 ? `... and ${count - 3} more commit${count - 3 === 1 ? '' : 's'}` : null,
                 statusIcon: null,
             };
         }
         case 'PullRequestEvent': {
-            const pr = payload.pull_request;
-            const action = payload.action;
+            const pr = payload.pull_request as { number?: number; title?: string; merged?: boolean } | undefined;
+            const action = payload.action as string | undefined;
             const merged = pr?.merged;
             let statusColor = 'text-success';
             let statusLabel = 'opened';
@@ -171,53 +174,54 @@ function getEventDetail(event: GitHubEvent) {
                 statusColor = 'text-danger';
                 statusLabel = 'closed';
             } else {
-                statusLabel = action;
+                statusLabel = action ?? 'opened';
             }
+            const prNumber = pr?.number ?? (payload.number as number | undefined);
             return {
                 icon: <GitPullRequest size={16} />,
                 color: statusColor,
                 action: `${statusLabel} a pull request in`,
                 details: null,
                 detailIcon: null,
-                title: pr?.title || (pr?.number || payload.number ? `Pull Request #${pr?.number || payload.number}` : null),
+                title: (pr?.title as string) || (prNumber ? `Pull Request #${prNumber}` : null),
                 statusIcon: <span className={`inline-block w-2 h-2 rounded-full ${statusColor === 'text-success' ? 'bg-success' : statusColor === 'text-danger' ? 'bg-danger' : 'bg-[#a371f7]'} mr-1`} />,
             };
         }
         case 'IssuesEvent': {
-            const issue = payload.issue;
-            const action = payload.action;
+            const issue = payload.issue as { number?: number; title?: string } | undefined;
+            const action = payload.action as string | undefined;
             return {
                 icon: <CircleDot size={16} />,
                 color: action === 'closed' ? 'text-[#a371f7]' : 'text-success',
-                action: `${action} an issue in`,
+                action: `${action ?? 'opened'} an issue in`,
                 details: null,
                 detailIcon: null,
-                title: issue?.title || (issue?.number ? `Issue #${issue?.number}` : null),
+                title: (issue?.title as string) || (issue?.number ? `Issue #${issue.number}` : null),
                 statusIcon: <span className={`inline-block w-2 h-2 rounded-full ${action === 'closed' ? 'bg-[#a371f7]' : 'bg-success'} mr-1`} />,
             };
         }
         case 'IssueCommentEvent': {
-            const issue = payload.issue;
+            const issue = payload.issue as { title?: string } | undefined;
             return {
                 icon: <MessageSquare size={16} />,
                 color: 'text-muted-foreground',
                 action: 'commented on an issue in',
                 details: null,
                 detailIcon: null,
-                title: issue?.title || null,
+                title: (issue?.title as string) || null,
                 statusIcon: null,
             };
         }
         case 'CreateEvent': {
-            const refType = payload.ref_type;
-            const ref = payload.ref;
+            const refType = payload.ref_type as string | undefined;
+            const ref = payload.ref as string | undefined;
             return {
                 icon: <GitBranch size={16} />,
                 color: 'text-primary',
-                action: `created ${refType}${ref ? ` ${ref}` : ''} in`,
+                action: `created ${refType ?? 'ref'}${ref ? ` ${ref}` : ''} in`,
                 details: null,
                 detailIcon: null,
-                title: payload.description || null,
+                title: (payload.description as string) || null,
                 statusIcon: null,
             };
         }
@@ -245,22 +249,24 @@ function getEventDetail(event: GitHubEvent) {
             return {
                 icon: <GitBranch size={16} />,
                 color: 'text-danger',
-                action: `deleted ${payload.ref_type} ${payload.ref || ''} in`,
+                action: `deleted ${payload.ref_type as string ?? ''} ${(payload.ref as string) || ''} in`,
                 details: null,
                 detailIcon: null,
                 title: null,
                 statusIcon: null,
             };
-        case 'PullRequestReviewEvent':
+        case 'PullRequestReviewEvent': {
+            const pr = payload.pull_request as { title?: string } | undefined;
             return {
                 icon: <GitPullRequest size={16} />,
                 color: 'text-[#a371f7]',
                 action: `reviewed a pull request in`,
                 details: null,
                 detailIcon: null,
-                title: payload.pull_request?.title || null,
+                title: (pr?.title as string) || null,
                 statusIcon: null,
             };
+        }
         default:
             return {
                 icon: <Activity size={16} />,
