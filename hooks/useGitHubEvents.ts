@@ -4,37 +4,73 @@ import { useGitStore } from '@/store/useGitStore';
 import { getCache, setCache, getCacheKey, clearCache, EVENTS_TTL } from '@/lib/cache';
 
 export function useGitHubEvents(usernames: string[]) {
-    const { pat } = useGitStore();
+    const { pat, setApiError } = useGitStore();
     const [events, setEvents] = useState<GitHubEvent[]>([]);
     const [loading, setLoading] = useState(false);
 
+    const usernamesStr = usernames.join(',');
+
     const fetchData = useCallback(async (forceRefresh = false) => {
-        if (!pat || usernames.length === 0) {
+        await Promise.resolve();
+        const currentUsers = usernamesStr ? usernamesStr.split(',') : [];
+        if (!pat || currentUsers.length === 0) {
             setEvents([]);
             return;
         }
 
         setLoading(true);
 
-        const promises = usernames.map(async (username) => {
-            if (!forceRefresh) {
-                const cached = getCache<GitHubEvent[]>(getCacheKey('events', username));
-                if (cached) return cached.data;
+        let isRateLimited = false;
+        let isBadCredentials = false;
+        const allEventPromises = [];
+
+        for (let i = 0; i < currentUsers.length; i += 3) {
+            const batch = currentUsers.slice(i, i + 3);
+            const batchPromises = batch.map(async (username) => {
+                if (!forceRefresh) {
+                    const cached = getCache<GitHubEvent[]>(getCacheKey('events', username));
+                    if (cached) return cached.data;
+                }
+
+                if (isBadCredentials) return [];
+
+                try {
+                    const result = await fetchGitHubEvents(username, pat);
+                    setCache(getCacheKey('events', username), result, EVENTS_TTL);
+                    return result;
+                } catch (error: unknown) {
+                    if (error instanceof Error) {
+                        if (error.message === 'RATE_LIMIT') isRateLimited = true;
+                        if (error.message === 'BAD_CREDENTIALS') isBadCredentials = true;
+                    }
+                    return [];
+                }
+            });
+            allEventPromises.push(...batchPromises);
+
+            if (isBadCredentials) break;
+
+            if (i + 3 < currentUsers.length) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
             }
+        }
 
-            const result = await fetchGitHubEvents(username, pat);
-            setCache(getCacheKey('events', username), result, EVENTS_TTL);
-            return result;
-        });
+        const results = await Promise.all(allEventPromises);
 
-        const results = await Promise.all(promises);
+        if (isBadCredentials) {
+            setApiError('Invalid GitHub Personal Access Token. Please check your credentials.');
+        } else if (isRateLimited) {
+            setApiError('API Rate limit exceeded. Check your PAT or try again later.');
+        } else {
+            setApiError(null);
+        }
         const allEvents = results.flat().sort((a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
 
         setEvents(allEvents);
         setLoading(false);
-    }, [usernames.join(','), pat]);
+    }, [usernamesStr, pat, setApiError]);
 
     const rescan = useCallback(() => {
         clearCache('events');
@@ -42,6 +78,7 @@ export function useGitHubEvents(usernames: string[]) {
     }, [fetchData]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchData();
     }, [fetchData]);
 

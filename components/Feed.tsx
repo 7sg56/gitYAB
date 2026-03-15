@@ -2,15 +2,9 @@
 
 import { useGitStore } from '@/store/useGitStore';
 import { useGitHubEvents } from '@/hooks/useGitHubEvents';
+import { formatTimeAgo } from '@/lib/utils';
 import { GitCommit, GitPullRequest, CircleDot, GitBranch, Star, Activity, RefreshCw, GitFork, MessageSquare } from 'lucide-react';
-
-function timeAgo(dateStr: string): string {
-    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-}
+import { GitHubEvent } from '@/lib/github';
 
 export function Feed() {
     const { rivals, enabledRivals } = useGitStore();
@@ -64,7 +58,7 @@ export function Feed() {
     );
 }
 
-function EventItem({ event }: { event: any }) {
+function EventItem({ event }: { event: GitHubEvent }) {
     const info = getEventDetail(event);
 
     return (
@@ -121,7 +115,7 @@ function EventItem({ event }: { event: any }) {
                 )}
 
                 {/* Timestamp */}
-                <p className="text-[11px] text-muted-foreground/60 mt-1.5">{timeAgo(event.created_at)}</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-1.5">{formatTimeAgo(event.created_at)}</p>
             </div>
 
             {/* Event type icon */}
@@ -132,33 +126,41 @@ function EventItem({ event }: { event: any }) {
     );
 }
 
-function timeAgoInline(dateStr: string): string {
-    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-}
+function getEventDetail(event: GitHubEvent) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const payload = event.payload as any;
 
-function getEventDetail(event: any) {
     switch (event.type) {
         case 'PushEvent': {
-            const commits = event.payload.commits || [];
-            const branch = event.payload.ref?.replace('refs/heads/', '') || 'unknown';
-            const count = commits.length;
+            const commits = payload.commits || [];
+            const branch = payload.ref?.replace('refs/heads/', '') || 'unknown';
+            const count = payload.size ?? commits.length;
+
+            if (count === 0) {
+                return {
+                    icon: <GitBranch size={16} />,
+                    color: 'text-primary',
+                    action: `pushed to ${branch} in`,
+                    details: null,
+                    detailIcon: null,
+                    title: null,
+                    statusIcon: null,
+                };
+            }
+
             return {
                 icon: <GitCommit size={16} />,
                 color: 'text-primary',
                 action: `pushed ${count} commit${count === 1 ? '' : 's'} to ${branch} in`,
-                details: commits.slice(0, 3).map((c: any) => `${c.sha?.slice(0, 7)} ${c.message?.split('\n')[0] || ''}`),
+                details: commits.slice(0, 3).map((c: { sha?: string, message?: string }) => `${c.sha?.slice(0, 7)} ${c.message?.split('\n')[0] || ''}`),
                 detailIcon: '\u2022',
                 title: count > 3 ? `... and ${count - 3} more commit${count - 3 === 1 ? '' : 's'}` : null,
                 statusIcon: null,
             };
         }
         case 'PullRequestEvent': {
-            const pr = event.payload.pull_request;
-            const action = event.payload.action;
+            const pr = payload.pull_request;
+            const action = payload.action;
             const merged = pr?.merged;
             let statusColor = 'text-success';
             let statusLabel = 'opened';
@@ -177,25 +179,25 @@ function getEventDetail(event: any) {
                 action: `${statusLabel} a pull request in`,
                 details: null,
                 detailIcon: null,
-                title: pr?.title || null,
+                title: pr?.title || (pr?.number || payload.number ? `Pull Request #${pr?.number || payload.number}` : null),
                 statusIcon: <span className={`inline-block w-2 h-2 rounded-full ${statusColor === 'text-success' ? 'bg-success' : statusColor === 'text-danger' ? 'bg-danger' : 'bg-[#a371f7]'} mr-1`} />,
             };
         }
         case 'IssuesEvent': {
-            const issue = event.payload.issue;
-            const action = event.payload.action;
+            const issue = payload.issue;
+            const action = payload.action;
             return {
                 icon: <CircleDot size={16} />,
                 color: action === 'closed' ? 'text-[#a371f7]' : 'text-success',
                 action: `${action} an issue in`,
                 details: null,
                 detailIcon: null,
-                title: issue?.title || null,
+                title: issue?.title || (issue?.number ? `Issue #${issue?.number}` : null),
                 statusIcon: <span className={`inline-block w-2 h-2 rounded-full ${action === 'closed' ? 'bg-[#a371f7]' : 'bg-success'} mr-1`} />,
             };
         }
         case 'IssueCommentEvent': {
-            const issue = event.payload.issue;
+            const issue = payload.issue;
             return {
                 icon: <MessageSquare size={16} />,
                 color: 'text-muted-foreground',
@@ -207,15 +209,15 @@ function getEventDetail(event: any) {
             };
         }
         case 'CreateEvent': {
-            const refType = event.payload.ref_type;
-            const ref = event.payload.ref;
+            const refType = payload.ref_type;
+            const ref = payload.ref;
             return {
                 icon: <GitBranch size={16} />,
                 color: 'text-primary',
                 action: `created ${refType}${ref ? ` ${ref}` : ''} in`,
                 details: null,
                 detailIcon: null,
-                title: event.payload.description || null,
+                title: payload.description || null,
                 statusIcon: null,
             };
         }
@@ -243,7 +245,7 @@ function getEventDetail(event: any) {
             return {
                 icon: <GitBranch size={16} />,
                 color: 'text-danger',
-                action: `deleted ${event.payload.ref_type} ${event.payload.ref || ''} in`,
+                action: `deleted ${payload.ref_type} ${payload.ref || ''} in`,
                 details: null,
                 detailIcon: null,
                 title: null,
@@ -256,7 +258,7 @@ function getEventDetail(event: any) {
                 action: `reviewed a pull request in`,
                 details: null,
                 detailIcon: null,
-                title: event.payload.pull_request?.title || null,
+                title: payload.pull_request?.title || null,
                 statusIcon: null,
             };
         default:

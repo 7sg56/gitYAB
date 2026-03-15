@@ -21,7 +21,7 @@ export interface GitHubEvent {
         name: string;
         url: string;
     };
-    payload: any;
+    payload: Record<string, unknown>;
     created_at: string;
 }
 
@@ -69,7 +69,14 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
         });
 
         if (!res.ok) {
-            console.error(`GitHub API HTTP error for ${username}:`, res.status, await res.text());
+            const body = await res.text();
+            console.error(`GitHub API HTTP error for ${username}:`, res.status, body);
+            if (res.status === 401) {
+                throw new Error('BAD_CREDENTIALS');
+            }
+            if (res.status === 403 || res.status === 429 || body.toLowerCase().includes('rate limit')) {
+                throw new Error('RATE_LIMIT');
+            }
             return null;
         }
 
@@ -77,6 +84,9 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
 
         if (json.errors) {
             console.error(`GraphQL Errors for ${username}:`, JSON.stringify(json.errors, null, 2));
+            if (json.errors[0]?.type === 'RATE_LIMITED' || json.errors.some((e: Record<string, unknown>) => typeof e.message === 'string' && e.message.toLowerCase().includes('rate limit'))) {
+                throw new Error('RATE_LIMIT');
+            }
             // If we have data despite errors (partial success), we can continue, 
             // but usually a "User not found" error makes the user object null.
             if (!json.data?.user) return null;
@@ -89,7 +99,10 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
         }
 
         const totalStars = user.repositories?.nodes?.reduce(
-            (acc: number, repo: any) => acc + (repo?.stargazers?.totalCount || 0),
+            (acc: number, repo: Record<string, unknown>) => {
+                const stargazers = repo?.stargazers as Record<string, unknown> | undefined;
+                return acc + (typeof stargazers?.totalCount === 'number' ? stargazers.totalCount : 0);
+            },
             0
         ) || 0;
 
@@ -104,7 +117,8 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
             totalIssuesYear: user.contributionsCollection?.totalIssueContributions || 0,
             totalPRsYear: user.contributionsCollection?.totalPullRequestContributions || 0,
         };
-    } catch (error) {
+    } catch (error: unknown) {
+        if (error instanceof Error && (error.message === 'RATE_LIMIT' || error.message === 'BAD_CREDENTIALS')) throw error;
         console.error(`Exception fetching stats for ${username}:`, error);
         return null;
     }
@@ -119,11 +133,19 @@ export async function fetchGitHubEvents(username: string, pat: string): Promise<
             },
         });
         if (!res.ok) {
-            console.error(`GitHub API error fetching events for ${username}`, await res.text());
+            const body = await res.text();
+            console.error(`GitHub API error fetching events for ${username}`, body);
+            if (res.status === 401) {
+                throw new Error('BAD_CREDENTIALS');
+            }
+            if (res.status === 403 || res.status === 429 || body.toLowerCase().includes('rate limit')) {
+                throw new Error('RATE_LIMIT');
+            }
             return [];
         }
         return await res.json();
-    } catch (error) {
+    } catch (error: unknown) {
+        if (error instanceof Error && (error.message === 'RATE_LIMIT' || error.message === 'BAD_CREDENTIALS')) throw error;
         console.error('Error fetching git events:', error);
         return [];
     }

@@ -1,21 +1,32 @@
 'use client';
 
-import { useState } from 'react';
-import { Github, KeyRound, User, ArrowRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Github, KeyRound, User, ArrowRight, AlertCircle } from 'lucide-react';
 import { useGitStore } from '@/store/useGitStore';
 
 export function SetupModal() {
-    const { pat, mainUser, setPat, setMainUser } = useGitStore();
-    const [inputPat, setInputPat] = useState('');
-    const [inputUser, setInputUser] = useState('');
+    const { pat, mainUser, setPat, setMainUser, apiError, setApiError } = useGitStore();
+    const [inputPat, setInputPat] = useState(pat || '');
+    const [inputUser, setInputUser] = useState(mainUser || '');
 
-    const isVisible = !pat || !mainUser;
+    const isInvalidToken = apiError === 'Invalid GitHub Personal Access Token. Please check your credentials.';
+    const isVisible = !pat || !mainUser || isInvalidToken;
+
+    useEffect(() => {
+        if (isVisible) {
+            if (!inputUser && mainUser) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
+                setInputUser(mainUser);
+            }
+        }
+    }, [isVisible, mainUser, inputUser]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (inputPat.trim() && inputUser.trim()) {
             setPat(inputPat.trim());
             setMainUser(inputUser.trim());
+            if (isInvalidToken) setApiError(null);
         }
     };
 
@@ -29,9 +40,18 @@ export function SetupModal() {
                     <h2 className="text-base font-semibold text-foreground">Set up GitYab</h2>
                 </div>
 
-                <p className="text-sm text-muted-foreground mb-5">
-                    Enter your GitHub username and a Personal Access Token to get started.
-                </p>
+                {isInvalidToken ? (
+                    <div className="flex gap-2 items-start p-3 mb-5 bg-danger/10 border border-danger/20 rounded-md">
+                        <AlertCircle className="text-danger mt-0.5" size={16} />
+                        <p className="text-sm text-danger/90 font-medium">
+                            Your Personal Access Token is invalid or expired. Please update it to continue to use GitYab.
+                        </p>
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground mb-5">
+                        Enter your GitHub username and a Personal Access Token to get started.
+                    </p>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-1.5">
@@ -73,15 +93,22 @@ export function SetupModal() {
                             />
                         </div>
                         <p className="text-[11px] text-muted-foreground/70">
-                            Needs read:user scope. Stored in your browser only.
+                            Needs <code>read:user</code> scope. Stored in your browser&apos;s local storage.
                         </p>
+                        <div className="mt-2 p-2.5 bg-danger/10 border border-danger/20 rounded-md">
+                            <p className="text-[11px] text-danger/90 leading-relaxed font-medium">
+                                ⚠️ Local storage is not fully secure against XSS.
+                                We strongly recommend generating a fine-grained PAT with
+                                strictly read-only permissions. Use at your own risk.
+                            </p>
+                        </div>
                     </div>
 
                     <button
                         type="submit"
                         className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-success hover:bg-success/90 text-white text-sm font-medium rounded-md transition-colors"
                     >
-                        Get started
+                        {isInvalidToken ? 'Update Token' : 'Get started'}
                         <ArrowRight size={14} />
                     </button>
                 </form>

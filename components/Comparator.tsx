@@ -56,13 +56,14 @@ export function Comparator() {
         });
 
         entries.sort((a, b) => {
-            let aVal: any, bVal: any;
+            let aVal: string | number = 0;
+            let bVal: string | number = 0;
             if (sortKey === 'name') {
                 aVal = a.name.toLowerCase();
                 bVal = b.name.toLowerCase();
             } else {
-                aVal = (a as any)[sortKey] || 0;
-                bVal = (b as any)[sortKey] || 0;
+                aVal = a[sortKey as keyof typeof a] as number || 0;
+                bVal = b[sortKey as keyof typeof b] as number || 0;
             }
             if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
             if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
@@ -76,7 +77,7 @@ export function Comparator() {
     const maxPerMetric = useMemo(() => {
         const maxes: Record<string, number> = {};
         METRICS.forEach((m) => {
-            maxes[m.key] = Math.max(...rows.map((r) => (r as any)[m.key] || 0));
+            maxes[m.key] = Math.max(...rows.map((r) => r[m.key as keyof typeof r] as number || 0));
         });
         return maxes;
     }, [rows]);
@@ -99,7 +100,7 @@ export function Comparator() {
         );
     }
 
-    const SortIcon = ({ col }: { col: SortKey }) => {
+    const renderSortIcon = (col: SortKey) => {
         if (sortKey !== col) return <ArrowUpDown size={12} className="text-muted-foreground/40" />;
         return sortDir === 'desc'
             ? <ArrowDown size={12} className="text-primary" />
@@ -125,7 +126,7 @@ export function Comparator() {
                                 onClick={() => handleSort('name')}
                             >
                                 <span className="flex items-center gap-1.5">
-                                    Developer <SortIcon col="name" />
+                                    Developer {renderSortIcon('name')}
                                 </span>
                             </th>
                             {METRICS.map((m) => (
@@ -135,7 +136,7 @@ export function Comparator() {
                                     onClick={() => handleSort(m.key as SortKey)}
                                 >
                                     <span className="flex items-center justify-end gap-1.5">
-                                        {m.shortLabel} <SortIcon col={m.key as SortKey} />
+                                        {m.shortLabel} {renderSortIcon(m.key as SortKey)}
                                     </span>
                                 </th>
                             ))}
@@ -176,9 +177,9 @@ export function Comparator() {
                                     </div>
                                 </td>
                                 {METRICS.map((m) => {
-                                    const val = (row as any)[m.key] || 0;
+                                    const val = row[m.key as keyof typeof row] as number || 0;
                                     const isMax = val === maxPerMetric[m.key] && val > 0;
-                                    const mainVal = mainStats ? (mainStats as any)[m.key] || 0 : 0;
+                                    const mainVal = mainStats ? mainStats[m.key as keyof typeof mainStats] as number || 0 : 0;
                                     const diff = row.isMain ? null : val - mainVal;
 
                                     return (

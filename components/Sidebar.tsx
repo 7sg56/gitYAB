@@ -4,7 +4,7 @@ import { useGitStore } from '@/store/useGitStore';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
 import { Github, LayoutDashboard, Activity, Swords, Crosshair, LogOut, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 export function Sidebar() {
     const {
@@ -29,9 +29,16 @@ export function Sidebar() {
         { id: 'target' as const, label: 'Target', icon: Crosshair },
     ];
 
+    const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+    useEffect(() => {
+        const interval = setInterval(() => setCurrentTime(Date.now()), 60000);
+        return () => clearInterval(interval);
+    }, []);
+
     const getTimeSince = (ts: number | null) => {
         if (!ts) return 'Never';
-        const diff = Math.floor((Date.now() - ts) / 1000);
+        const diff = Math.floor((currentTime - ts) / 1000);
         if (diff < 60) return `${diff}s ago`;
         if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
         return `${Math.floor(diff / 3600)}h ago`;
