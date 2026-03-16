@@ -6,10 +6,11 @@ import { formatTimeAgo } from '@/lib/utils';
 import { GitCommit, GitPullRequest, CircleDot, GitBranch, Star, Activity, RefreshCw, GitFork, MessageSquare } from 'lucide-react';
 import { GitHubEvent } from '@/lib/github';
 import Image from 'next/image';
+import { useMemo } from 'react';
 
 export function Feed() {
     const { rivals, enabledRivals } = useGitStore();
-    const activeRivals = rivals.filter((r) => enabledRivals[r] !== false);
+    const activeRivals = useMemo(() => rivals.filter((r) => enabledRivals[r] !== false), [rivals, enabledRivals]);
     const { events, loading, rescan } = useGitHubEvents(activeRivals);
 
     if (activeRivals.length === 0) {

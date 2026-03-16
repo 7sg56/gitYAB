@@ -164,7 +164,9 @@ export async function fetchGitHubEvents(username: string, pat: string): Promise<
             }
             return [];
         }
-        return await res.json();
+        const data = await res.json();
+        if (!Array.isArray(data)) return [];
+        return data;
     } catch (error: unknown) {
         if (error instanceof Error && (error.message === 'RATE_LIMIT' || error.message === 'BAD_CREDENTIALS')) throw error;
         console.error('Error fetching git events:', error);
