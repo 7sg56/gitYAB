@@ -17,7 +17,7 @@ interface RivalRanking {
 
 export function TargetRival() {
     const { mainUser, rivals, enabledRivals } = useGitStore();
-    const activeRivals = rivals.filter((r) => enabledRivals[r] !== false);
+    const activeRivals = useMemo(() => rivals.filter((r) => enabledRivals[r] !== false), [rivals, enabledRivals]);
     const allUsers = useMemo(() => [mainUser, ...activeRivals].filter(Boolean), [mainUser, activeRivals]);
     const { data, loading } = useGitHubStats(allUsers);
 

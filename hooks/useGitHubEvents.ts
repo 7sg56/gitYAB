@@ -7,11 +7,11 @@ export function useGitHubEvents(usernames: string[]) {
     const { pat, setApiError } = useGitStore();
     const [events, setEvents] = useState<GitHubEvent[]>([]);
     const [loading, setLoading] = useState(false);
+    const usernamesKey = usernames.join(',');
 
     const fetchData = useCallback(async (forceRefresh = false) => {
         await Promise.resolve();
-        const usernamesStr = usernames.join(',');
-        const currentUsers = usernamesStr ? usernamesStr.split(',') : [];
+        const currentUsers = usernamesKey ? usernamesKey.split(',') : [];
         if (!pat || currentUsers.length === 0) {
             setEvents([]);
             return;
@@ -69,7 +69,7 @@ export function useGitHubEvents(usernames: string[]) {
 
         setEvents(allEvents);
         setLoading(false);
-    }, [usernames, pat, setApiError]);
+    }, [usernamesKey, pat, setApiError]);
 
     const rescan = useCallback(() => {
         clearCache('events');

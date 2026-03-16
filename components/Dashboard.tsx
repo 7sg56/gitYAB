@@ -10,7 +10,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 
 export function Dashboard() {
     const { mainUser, rivals, enabledRivals } = useGitStore();
-    const activeRivals = rivals.filter((r) => enabledRivals[r] !== false);
+    const activeRivals = useMemo(() => rivals.filter((r) => enabledRivals[r] !== false), [rivals, enabledRivals]);
     const allUsers = useMemo(() => [mainUser, ...activeRivals].filter(Boolean) as string[], [mainUser, activeRivals]);
 
     const { data, loading: statsLoading, rescan: rescanStats } = useGitHubStats(allUsers);
@@ -270,7 +270,7 @@ export function Dashboard() {
                                 Contributions
                             </h3>
                             <div className="flex-1 w-full min-h-[300px]">
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                                         <XAxis dataKey="name" stroke="#8b949e" fontSize={11} tickLine={false} axisLine={false} tickMargin={12} angle={-35} textAnchor="end" height={60} tickFormatter={(val) => val.length > 12 ? `${val.substring(0, 10)}...` : val} />
                                         <YAxis stroke="#8b949e" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val} />
@@ -290,7 +290,7 @@ export function Dashboard() {
                                 Reach
                             </h3>
                             <div className="flex-1 w-full min-h-[300px]">
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                     <BarChart data={popularityData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                                         <XAxis dataKey="name" stroke="#8b949e" fontSize={11} tickLine={false} axisLine={false} tickMargin={12} angle={-35} textAnchor="end" height={60} tickFormatter={(val) => val.length > 12 ? `${val.substring(0, 10)}...` : val} />
                                         <YAxis stroke="#8b949e" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val} />

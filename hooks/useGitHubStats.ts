@@ -8,10 +8,11 @@ export function useGitHubStats(usernames: string[]) {
     const [data, setData] = useState<Record<string, GitHubUserStats | null>>({});
     const [loading, setLoading] = useState(false);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const usernamesKey = usernames.join(',');
 
     const fetchData = useCallback(async (forceRefresh = false) => {
         await Promise.resolve();
-        const currentUsers = usernames;
+        const currentUsers = usernamesKey ? usernamesKey.split(',') : [];
         if (!pat || currentUsers.length === 0) return;
 
         setLoading(true);
@@ -64,7 +65,7 @@ export function useGitHubStats(usernames: string[]) {
         setData((prev) => ({ ...prev, ...results }));
         setLastScanTimestamp(Date.now());
         setLoading(false);
-    }, [usernames, pat, setLastScanTimestamp, setApiError]);
+    }, [usernamesKey, pat, setLastScanTimestamp, setApiError]);
 
     const rescan = useCallback(() => {
         clearCache('stats');
@@ -84,7 +85,7 @@ export function useGitHubStats(usernames: string[]) {
             intervalRef.current = null;
         }
 
-        if (autoRescanEnabled && pat && usernames.length > 0) {
+        if (autoRescanEnabled && pat && usernamesKey) {
             intervalRef.current = setInterval(() => {
                 clearCache('stats');
                 fetchData(true);
@@ -96,7 +97,7 @@ export function useGitHubStats(usernames: string[]) {
                 clearInterval(intervalRef.current);
             }
         };
-    }, [autoRescanEnabled, autoRescanIntervalMs, fetchData, pat, usernames]);
+    }, [autoRescanEnabled, autoRescanIntervalMs, fetchData, pat, usernamesKey]);
 
     return { data, loading, rescan };
 }
