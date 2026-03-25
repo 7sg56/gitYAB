@@ -1,32 +1,39 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Github, KeyRound, User, ArrowRight, AlertCircle } from 'lucide-react';
+import { Github, KeyRound, User, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useGitStore } from '@/store/useGitStore';
 
 export function SetupModal() {
-    const { pat, mainUser, setPat, setMainUser, apiError, setApiError } = useGitStore();
-    const [inputPat, setInputPat] = useState(pat || '');
-    const [inputUser, setInputUser] = useState(mainUser || '');
+    const { pat, mainUser, completeSetup, apiError, setApiError, isLoading, hasSetupCompleted } = useGitStore();
+    const [inputPat, setInputPat] = useState('');
+    const [inputUser, setInputUser] = useState('');
 
     const isInvalidToken = apiError === 'Invalid GitHub Personal Access Token. Please check your credentials.';
-    const isVisible = !pat || !mainUser || isInvalidToken;
+    const isVisible = !hasSetupCompleted || isInvalidToken;
 
     useEffect(() => {
         if (isVisible) {
             if (!inputUser && mainUser) {
-                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setInputUser(mainUser);
             }
+            if (!inputPat && pat) {
+                setInputPat(pat);
+            }
         }
-    }, [isVisible, mainUser, inputUser]);
+    }, [isVisible, mainUser, pat, inputUser, inputPat]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isLoading) return;
+
         if (inputPat.trim() && inputUser.trim()) {
-            setPat(inputPat.trim());
-            setMainUser(inputUser.trim());
-            if (isInvalidToken) setApiError(null);
+            const result = await completeSetup(inputUser.trim(), inputPat.trim());
+            if (!result.error) {
+                setInputPat('');
+            } else if (isInvalidToken) {
+                setApiError(null);
+            }
         }
     };
 
@@ -93,23 +100,26 @@ export function SetupModal() {
                             />
                         </div>
                         <p className="text-[11px] text-muted-foreground/70">
-                            Needs <code>read:user</code> scope. Stored in your browser&apos;s local storage.
+                            Needs <code>read:user</code> scope. Encrypted and stored securely in our database.
                         </p>
-                        <div className="mt-2 p-2.5 bg-danger/10 border border-danger/20 rounded-md">
-                            <p className="text-[11px] text-danger/90 leading-relaxed font-medium">
-                                ⚠️ Local storage is not fully secure against XSS.
-                                We strongly recommend generating a fine-grained PAT with
-                                strictly read-only permissions. Use at your own risk.
-                            </p>
-                        </div>
                     </div>
 
                     <button
                         type="submit"
-                        className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-success hover:bg-success/90 text-white text-sm font-medium rounded-md transition-colors"
+                        disabled={isLoading}
+                        className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-success hover:bg-success/90 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isInvalidToken ? 'Update Token' : 'Get started'}
-                        <ArrowRight size={14} />
+                        {isLoading ? (
+                            <>
+                                <Loader2 size={14} className="animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                {isInvalidToken ? 'Update Token' : 'Get started'}
+                                <ArrowRight size={14} />
+                            </>
+                        )}
                     </button>
                 </form>
             </div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useGitStore } from '@/store/useGitStore';
-import { Plus, X, Eye, EyeOff, Users, PanelRightClose, PanelRightOpen, RefreshCw } from 'lucide-react';
+import { Plus, X, Eye, EyeOff, Users, PanelRightClose, PanelRightOpen, RefreshCw, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
 import Image from 'next/image';
@@ -13,16 +13,36 @@ export function RivalsPanel() {
         rightPanelOpen, setRightPanelOpen,
     } = useGitStore();
     const [newRival, setNewRival] = useState('');
+    const [isAdding, setIsAdding] = useState(false);
+    const [removingRival, setRemovingRival] = useState<string | null>(null);
+    const [togglingRival, setTogglingRival] = useState<string | null>(null);
     const allUsers = [mainUser, ...rivals].filter(Boolean);
     const { data, rescan, loading } = useGitHubStats(allUsers);
 
-    const handleAdd = (e: React.FormEvent) => {
+    const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
         const name = newRival.trim();
-        if (name && name !== mainUser && !rivals.includes(name)) {
-            addRival(name);
-            setNewRival('');
+        if (!name || name === mainUser || rivals.includes(name) || isAdding) {
+            return;
         }
+        setIsAdding(true);
+        await addRival(name);
+        setNewRival('');
+        setIsAdding(false);
+    };
+
+    const handleRemove = async (rival: string) => {
+        if (removingRival) return;
+        setRemovingRival(rival);
+        await removeRival(rival);
+        setRemovingRival(null);
+    };
+
+    const handleToggle = async (rival: string) => {
+        if (togglingRival) return;
+        setTogglingRival(rival);
+        await toggleRival(rival);
+        setTogglingRival(null);
     };
 
     // Toggle button (always visible)
@@ -30,7 +50,7 @@ export function RivalsPanel() {
         return (
             <button
                 onClick={() => setRightPanelOpen(true)}
-                className="fixed right-0 top-3. z-30 p-2 bg-card border border-border border-r-0 rounded-l-md text-muted-foreground hover:text-foreground transition-colors"
+                className="fixed right-0 top-3 z-30 p-2 bg-card border border-border border-r-0 rounded-l-md text-muted-foreground hover:text-foreground transition-colors"
                 title="Open rivals panel"
             >
                 <PanelRightOpen size={16} />
@@ -77,14 +97,15 @@ export function RivalsPanel() {
                         value={newRival}
                         onChange={(e) => setNewRival(e.target.value)}
                         placeholder="Add username..."
-                        className="flex-1 min-w-0 px-3 py-1.5 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-muted-foreground/60 transition-colors"
+                        className="flex-1 min-w-0 px-3 py-1.5 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-muted-foreground/60 transition-colors disabled:opacity-50"
+                        disabled={isAdding}
                     />
                     <button
                         type="submit"
-                        disabled={!newRival.trim()}
+                        disabled={!newRival.trim() || isAdding}
                         className="px-2.5 py-1.5 bg-accent text-foreground rounded-md text-sm hover:bg-accent/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
-                        <Plus size={14} />
+                        {isAdding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                     </button>
                 </form>
             </div>
@@ -135,18 +156,26 @@ export function RivalsPanel() {
 
                                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
-                                            onClick={() => toggleRival(rival)}
-                                            className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                                            onClick={() => handleToggle(rival)}
+                                            disabled={togglingRival === rival}
+                                            className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             title={isEnabled ? 'Hide from charts' : 'Show in charts'}
                                         >
-                                            {isEnabled ? <Eye size={13} /> : <EyeOff size={13} />}
+                                            {togglingRival === rival ? (
+                                                <Loader2 size={13} className="animate-spin" />
+                                            ) : isEnabled ? <Eye size={13} /> : <EyeOff size={13} />}
                                         </button>
                                         <button
-                                            onClick={() => removeRival(rival)}
-                                            className="p-1 rounded text-muted-foreground hover:text-danger transition-colors"
+                                            onClick={() => handleRemove(rival)}
+                                            disabled={removingRival === rival}
+                                            className="p-1 rounded text-muted-foreground hover:text-danger transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             title="Remove rival"
                                         >
-                                            <X size={13} />
+                                            {removingRival === rival ? (
+                                                <Loader2 size={13} className="animate-spin" />
+                                            ) : (
+                                                <X size={13} />
+                                            )}
                                         </button>
                                     </div>
                                 </div>

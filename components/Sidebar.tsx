@@ -2,7 +2,7 @@
 
 import { useGitStore } from '@/store/useGitStore';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
-import { Github, LayoutDashboard, Activity, Swords, Crosshair, LogOut, Timer } from 'lucide-react';
+import { Github, LayoutDashboard, Activity, Swords, Crosshair, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -10,7 +10,6 @@ import Image from 'next/image';
 export function Sidebar() {
     const {
         mainUser,
-        clearState,
         currentView,
         setCurrentView,
         autoRescanEnabled,
@@ -105,9 +104,9 @@ export function Sidebar() {
                 </nav>
             )}
 
-            {/* User + Logout */}
+            {/* User info */}
             {mainUser && (
-                <div className="border-t border-border p-3 space-y-1">
+                <div className="border-t border-border p-3">
                     <div className="flex items-center gap-2.5 px-3 py-2">
                         {mainStats?.avatarUrl ? (
                             <Image
@@ -128,13 +127,6 @@ export function Sidebar() {
                             <span className="text-[11px] text-muted-foreground truncate block">@{mainUser}</span>
                         </div>
                     </div>
-                    <button
-                        onClick={clearState}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors"
-                    >
-                        <LogOut size={14} />
-                        Reset
-                    </button>
                 </div>
             )}
         </div>
