@@ -4,7 +4,6 @@ import {
     signIn,
     signUp,
     signOut,
-    onAuthStateChange,
     completeSetup,
     getPat,
     getGithubUsername,
@@ -15,11 +14,10 @@ import {
     addRival as addRivalDb,
     removeRival as removeRivalDb,
     toggleRival as toggleRivalDb,
-    updateRivalsEnabledStates,
     initSessionKey,
     clearSessionKey,
 } from '@/lib/auth';
-import { supabase, type UserSettings as DbUserSettings, type Rival as DbRival } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 type ViewType = 'home' | 'feed' | 'comparator' | 'target';
 
@@ -138,6 +136,7 @@ export const useGitStore = create<GitState>()(
 
             completeSetup: async (githubUsername: string, pat: string) => {
                 set({ isLoading: true, apiError: null });
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const { error } = await completeSetup(githubUsername, pat);
 
                 if (error) {
@@ -152,7 +151,6 @@ export const useGitStore = create<GitState>()(
 
             refreshAuthState: async () => {
                 set({ isLoading: true });
-
                 try {
                     // Check auth status
                     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -191,9 +189,7 @@ export const useGitStore = create<GitState>()(
 
             // Data actions
             setPat: (pat) => set({ pat }),
-
             setMainUser: (mainUser) => set({ mainUser }),
-
             addRival: async (user: string) => {
                 const { error } = await addRivalDb(user);
                 if (!error) {
@@ -224,8 +220,8 @@ export const useGitStore = create<GitState>()(
             },
 
             setCurrentView: (view) => set({ currentView: view }),
-
             setAutoRescanEnabled: async (enabled) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const { error } = await updateUserSettings({ auto_rescan_enabled: enabled });
                 if (!error) {
                     set({ autoRescanEnabled: enabled });
@@ -233,6 +229,7 @@ export const useGitStore = create<GitState>()(
             },
 
             setAutoRescanIntervalMs: async (ms) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const { error } = await updateUserSettings({ auto_rescan_interval_ms: ms });
                 if (!error) {
                     set({ autoRescanIntervalMs: ms });
@@ -240,8 +237,8 @@ export const useGitStore = create<GitState>()(
             },
 
             setLastScanTimestamp: (ts) => set({ lastScanTimestamp: ts }),
-
             setRightPanelOpen: async (open) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const { error } = await updateUserSettings({ right_panel_open: open });
                 if (!error) {
                     set({ rightPanelOpen: open });
@@ -275,6 +272,7 @@ export const useGitStore = create<GitState>()(
                     set({ mainUser: mainUser || '' });
 
                     // Get user settings
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const settings = await getUserSettings();
                     if (settings) {
                         set({

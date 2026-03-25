@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { Sidebar } from '@/components/Sidebar';
-import { RivalsPanel } from '@/components/RivalsPanel';
 import { AuthModal } from '@/components/AuthModal';
 import { SetupModal } from '@/components/SetupModal';
 import { UserMenu } from '@/components/UserMenu';

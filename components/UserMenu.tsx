@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { LogOut, User as UserIcon, ChevronDown, Loader2 } from 'lucide-react';
+import { LogOut, User as UserIcon, ChevronDown } from 'lucide-react';
 import { useGitStore } from '@/store/useGitStore';
 import { cn } from '@/lib/utils';
 
 export function UserMenu() {
-    const { user, signOut, isLoading } = useGitStore();
+    const { user, signOut } = useGitStore();
     const [isOpen, setIsOpen] = useState(false);
     const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -36,7 +36,7 @@ export function UserMenu() {
                     <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-md shadow-lg z-20 overflow-hidden">
                         <div className="px-3 py-2 border-b border-border">
                             <p className="text-xs text-muted-foreground">Signed in as</p>
-                            <p className="text-xs text-foreground truncate font-medium">{user.email}</p>
+                            <p className="text-xs text-foreground truncate">{user.email}</p>
                         </div>
                         <button
                             onClick={handleSignOut}
@@ -45,7 +45,6 @@ export function UserMenu() {
                         >
                             {isSigningOut ? (
                                 <>
-                                    <Loader2 size={12} className="animate-spin" />
                                     Signing out...
                                 </>
                             ) : (

@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/types/database';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
 if (!supabaseUrl || !supabasePublishableKey) {
@@ -9,7 +9,7 @@ if (!supabaseUrl || !supabasePublishableKey) {
 }
 
 // Create client without strict typing to avoid inference issues
-// We'll use interface types for type safety
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     auth: {
         autoRefreshToken: true,
@@ -56,7 +56,7 @@ export interface GitHubStatsCache {
     created_at: string;
 }
 
-// Type-safe query builders using the Database type directly
+// Type-safe query builders
 export const db = {
     users: () => supabase.from('users'),
     userSettings: () => supabase.from('user_settings'),
@@ -72,7 +72,7 @@ export async function getCurrentUserRecord() {
         return { data: null, error: authError };
     }
 
-    // Cast to any to work around type inference issues
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await supabase
         .from('users')
         .select('*')
