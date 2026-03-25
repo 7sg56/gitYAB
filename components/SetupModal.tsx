@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { Github, KeyRound, User, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
-import { useGitStore } from '@/store/useGitStore.ts';
+import { useGitStore } from '@/store/useGitStore';
 
 export function SetupModal() {
     const { pat, mainUser, completeSetup, apiError, setApiError, isLoading, hasSetupCompleted } = useGitStore();
-    // Track whether we've initialized the form values
     const [initialized, setInitialized] = useState(false);
     const [inputPat, setInputPat] = useState('');
     const [inputUser, setInputUser] = useState('');
@@ -14,18 +13,18 @@ export function SetupModal() {
     const isInvalidToken = apiError === 'Invalid GitHub Personal Access Token. Please check your credentials.';
     const isVisible = !hasSetupCompleted || isInvalidToken;
 
-    // Only initialize form values when modal becomes visible and not yet initialized
+    // Initialize form values when modal becomes visible
     useEffect(() => {
+        /* eslint-disable react-hooks/set-state-in-effect */
         if (isVisible && !initialized) {
             setInputUser(mainUser);
             setInputPat(pat);
             setInitialized(true);
         }
-        // Reset when modal closes
         if (!isVisible) {
             setInitialized(false);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        /* eslint-enable react-hooks/set-state-in-effect */
     }, [isVisible, mainUser, pat, initialized]);
 
     const handleSubmit = async (e: React.FormEvent) => {

@@ -42,10 +42,10 @@ interface GitState {
     apiError: string | null;
 
     // Auth actions
-    signIn: (email: string, password: string) => Promise<{ error: any }>;
-    signUp: (email: string, password: string) => Promise<{ error: any }>;
-    signOut: () => Promise<{ error: any }>;
-    completeSetup: (githubUsername: string, pat: string) => Promise<{ error: any }>;
+    signIn: (email: string, password: string) => Promise<{ error: { message: string } | null }>;
+    signUp: (email: string, password: string) => Promise<{ error: { message: string } | null }>;
+    signOut: () => Promise<{ error: { message: string } | null }>;
+    completeSetup: (githubUsername: string, pat: string) => Promise<{ error: { message: string } | null }>;
     refreshAuthState: () => Promise<void>;
 
     // Data actions
@@ -70,7 +70,7 @@ export const useGitStore = create<GitState>()(
         (set, get) => ({
             // Initial state
             isAuthenticated: false,
-            isAuthenticating: true,
+            isAuthenticating: false,
             user: null,
             hasSetupCompleted: false,
             isLoading: true,
@@ -136,7 +136,6 @@ export const useGitStore = create<GitState>()(
 
             completeSetup: async (githubUsername: string, pat: string) => {
                 set({ isLoading: true, apiError: null });
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const { error } = await completeSetup(githubUsername, pat);
 
                 if (error) {
@@ -183,7 +182,7 @@ export const useGitStore = create<GitState>()(
                 } catch (error) {
                     console.error('Error refreshing auth state:', error);
                 } finally {
-                    set({ isLoading: false });
+                    set({ isLoading: false, isAuthenticating: false });
                 }
             },
 
@@ -221,7 +220,6 @@ export const useGitStore = create<GitState>()(
 
             setCurrentView: (view) => set({ currentView: view }),
             setAutoRescanEnabled: async (enabled) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const { error } = await updateUserSettings({ auto_rescan_enabled: enabled });
                 if (!error) {
                     set({ autoRescanEnabled: enabled });
@@ -229,7 +227,6 @@ export const useGitStore = create<GitState>()(
             },
 
             setAutoRescanIntervalMs: async (ms) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const { error } = await updateUserSettings({ auto_rescan_interval_ms: ms });
                 if (!error) {
                     set({ autoRescanIntervalMs: ms });
@@ -238,7 +235,6 @@ export const useGitStore = create<GitState>()(
 
             setLastScanTimestamp: (ts) => set({ lastScanTimestamp: ts }),
             setRightPanelOpen: async (open) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const { error } = await updateUserSettings({ right_panel_open: open });
                 if (!error) {
                     set({ rightPanelOpen: open });
@@ -272,7 +268,6 @@ export const useGitStore = create<GitState>()(
                     set({ mainUser: mainUser || '' });
 
                     // Get user settings
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const settings = await getUserSettings();
                     if (settings) {
                         set({
@@ -311,7 +306,7 @@ export const useGitStore = create<GitState>()(
 
 // Initialize auth state change listener
 if (typeof window !== 'undefined') {
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    supabase.auth.onAuthStateChange(async (event) => {
         const store = useGitStore.getState();
         if (event === 'SIGNED_IN') {
             await store.refreshAuthState();

@@ -94,6 +94,7 @@ export async function isAuthenticated() {
 /**
  * Listen to auth state changes
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function onAuthStateChange(callback: (event: string, session: any) => void) {
     return supabase.auth.onAuthStateChange(callback);
 }
@@ -113,9 +114,10 @@ export async function completeSetup(githubUsername: string, pat: string) {
 
     const encryptedPat = encryptPatForStorage(pat);
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
         .from('users')
-        .update({ github_username: githubUsername, encrypted_pat: encryptedPat }) as any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update({ github_username: githubUsername, encrypted_pat: encryptedPat }) as any)
         .eq('id', userId)
         .select()
         .single();
@@ -190,9 +192,10 @@ export async function updateUserSettings(settings: { auto_rescan_enabled?: boole
         return { error: { message: 'User not authenticated' } };
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
         .from('user_settings')
-        .update(settings) as any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update(settings) as any)
         .eq('user_id', userId)
         .select()
         .single();
@@ -330,6 +333,7 @@ export async function cacheStats(username: string, data: unknown, expiresInMinut
 
     const { error } = await supabase
         .from('github_stats_cache')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .upsert({ username: username.toLowerCase(), data, expires_at: expiresAt.toISOString() }) as any;
 
     return { error };
