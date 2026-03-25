@@ -89,14 +89,14 @@ export const useGitStore = create<GitState>()(
             // Auth actions
             signIn: async (email: string, password: string) => {
                 set({ isAuthenticating: true, apiError: null });
-                const { data, error } = await signIn(email, password);
+                const result = await signIn(email, password);
 
-                if (error) {
-                    set({ isAuthenticating: false, apiError: error.message });
-                    return { error };
+                if (result.error) {
+                    set({ isAuthenticating: false, apiError: result.error.message });
+                    return { error: result.error };
                 }
 
-                if (data.user) {
+                if (result.data.user) {
                     await get().refreshAuthState();
                 }
 
@@ -106,11 +106,11 @@ export const useGitStore = create<GitState>()(
 
             signUp: async (email: string, password: string) => {
                 set({ isAuthenticating: true, apiError: null });
-                const { data, error } = await signUp(email, password);
+                const result = await signUp(email, password);
 
-                if (error) {
-                    set({ isAuthenticating: false, apiError: error.message });
-                    return { error };
+                if (result.error) {
+                    set({ isAuthenticating: false, apiError: result.error.message });
+                    return { error: result.error };
                 }
 
                 set({ isAuthenticating: false });

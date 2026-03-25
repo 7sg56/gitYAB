@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
 if (!supabaseUrl || !supabasePublishableKey) {
@@ -9,7 +8,6 @@ if (!supabaseUrl || !supabasePublishableKey) {
 }
 
 // Create client without strict typing to avoid inference issues
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     auth: {
         autoRefreshToken: true,
@@ -51,18 +49,10 @@ export interface Rival {
 export interface GitHubStatsCache {
     id: string;
     username: string;
-    data: any;
+    data: unknown;
     expires_at: string;
     created_at: string;
 }
-
-// Type-safe query builders
-export const db = {
-    users: () => supabase.from('users'),
-    userSettings: () => supabase.from('user_settings'),
-    rivals: () => supabase.from('rivals'),
-    githubStatsCache: () => supabase.from('github_stats_cache'),
-};
 
 // Helper function to get current user's user record (not auth record)
 export async function getCurrentUserRecord() {
@@ -72,7 +62,6 @@ export async function getCurrentUserRecord() {
         return { data: null, error: authError };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await supabase
         .from('users')
         .select('*')

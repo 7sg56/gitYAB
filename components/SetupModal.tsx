@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Github, KeyRound, User, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
-import { useGitStore } from '@/store/useGitStore';
+import { useGitStore } from '@/store/useGitStore.ts';
 
 export function SetupModal() {
     const { pat, mainUser, completeSetup, apiError, setApiError, isLoading, hasSetupCompleted } = useGitStore();

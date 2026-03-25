@@ -5,9 +5,6 @@ import { generateSessionKey, encryptWithSessionKey, decryptWithSessionKey } from
  * Authentication and data management functions
  */
 
-// Session key for encrypting/decrypting PAT during the user's session
-let sessionKey: string | null = null;
-
 /**
  * Initialize or retrieve the session key from sessionStorage
  */
@@ -21,7 +18,6 @@ export function initSessionKey(): string {
         key = generateSessionKey();
         sessionStorage.setItem('gityab_session_key', key);
     }
-    sessionKey = key;
     return key;
 }
 
@@ -32,11 +28,10 @@ export function clearSessionKey(): void {
     if (typeof window !== 'undefined') {
         sessionStorage.removeItem('gityab_session_key');
     }
-    sessionKey = null;
 }
 
 /**
- * Encrypt PAT using session key
+ * Encrypt PAT using the session key
  */
 function encryptPatForStorage(pat: string): string {
     const key = initSessionKey();
@@ -44,7 +39,7 @@ function encryptPatForStorage(pat: string): string {
 }
 
 /**
- * Decrypt PAT using session key
+ * Decrypt PAT using the session key
  */
 function decryptPatFromStorage(encryptedPat: string): string {
     const key = initSessionKey();
@@ -80,7 +75,7 @@ export async function signIn(email: string, password: string) {
 }
 
 /**
- * Sign out the current user
+ * Sign out of the current user
  */
 export async function signOut() {
     clearSessionKey();
@@ -110,7 +105,6 @@ export function onAuthStateChange(callback: (event: string, session: any) => voi
 /**
  * Complete initial setup - save GitHub username and PAT
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function completeSetup(githubUsername: string, pat: string) {
     const userId = await getCurrentUserId();
     if (!userId) {
@@ -121,7 +115,7 @@ export async function completeSetup(githubUsername: string, pat: string) {
 
     const { data, error } = await supabase
         .from('users')
-        .update({ github_username: githubUsername, encrypted_pat: encryptedPat } as any)
+        .update({ github_username: githubUsername, encrypted_pat: encryptedPat })
         .eq('id', userId)
         .select()
         .single();
@@ -184,14 +178,13 @@ export async function getUserSettings() {
         .eq('user_id', userId)
         .single();
 
-    return error ? null : (data as any | null);
+    return error ? null : data;
 }
 
 /**
  * Update user settings
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function updateUserSettings(settings: any) {
+export async function updateUserSettings(settings: { auto_rescan_enabled?: boolean; auto_rescan_interval_ms?: number; right_panel_open?: boolean }) {
     const userId = await getCurrentUserId();
     if (!userId) {
         return { error: { message: 'User not authenticated' } };
@@ -199,7 +192,7 @@ export async function updateUserSettings(settings: any) {
 
     const { data, error } = await supabase
         .from('user_settings')
-        .update(settings as any)
+        .update(settings)
         .eq('user_id', userId)
         .select()
         .single();
@@ -226,13 +219,12 @@ export async function getRivals() {
         .eq('user_id', userId)
         .order('created_at', { ascending: true });
 
-    return error ? [] : (data as any[] || []);
+    return error ? [] : (data ?? []);
 }
 
 /**
  * Add a new rival
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function addRival(rivalUsername: string) {
     const userId = await getCurrentUserId();
     if (!userId) {
@@ -241,7 +233,7 @@ export async function addRival(rivalUsername: string) {
 
     const { data, error } = await supabase
         .from('rivals')
-        .insert({ user_id: userId, rival_username: rivalUsername.toLowerCase(), enabled: true } as any)
+        .insert({ user_id: userId, rival_username: rivalUsername.toLowerCase(), enabled: true })
         .select()
         .single();
 
@@ -269,7 +261,6 @@ export async function removeRival(rivalId: string) {
 /**
  * Toggle rival enabled state
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function toggleRival(rivalId: string, enabled: boolean) {
     const userId = await getCurrentUserId();
     if (!userId) {
@@ -278,7 +269,7 @@ export async function toggleRival(rivalId: string, enabled: boolean) {
 
     const { data, error } = await supabase
         .from('rivals')
-        .update({ enabled } as any)
+        .update({ enabled })
         .eq('id', rivalId)
         .eq('user_id', userId)
         .select()
@@ -299,8 +290,7 @@ export async function updateRivalsEnabledStates(rivalsEnabled: Record<string, bo
     const updates = Object.entries(rivalsEnabled).map(([rivalUsername, enabled]) =>
         supabase
             .from('rivals')
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .update({ enabled } as any)
+            .update({ enabled })
             .eq('user_id', userId)
             .eq('rival_username', rivalUsername.toLowerCase())
     );
@@ -334,14 +324,13 @@ export async function getCachedStats(username: string) {
 /**
  * Cache stats for a username
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function cacheStats(username: string, data: any, expiresInMinutes: number = 5) {
+export async function cacheStats(username: string, data: unknown, expiresInMinutes: number = 5) {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + expiresInMinutes);
 
     const { error } = await supabase
         .from('github_stats_cache')
-        .upsert({ username: username.toLowerCase(), data, expires_at: expiresAt.toISOString() } as any);
+        .upsert({ username: username.toLowerCase(), data, expires_at: expiresAt.toISOString() });
 
     return { error };
 }
