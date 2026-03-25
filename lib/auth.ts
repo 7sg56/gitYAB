@@ -115,7 +115,7 @@ export async function completeSetup(githubUsername: string, pat: string) {
 
     const { data, error } = await supabase
         .from('users')
-        .update({ github_username: githubUsername, encrypted_pat: encryptedPat })
+        .update({ github_username: githubUsername, encrypted_pat: encryptedPat }) as any
         .eq('id', userId)
         .select()
         .single();
@@ -192,7 +192,7 @@ export async function updateUserSettings(settings: { auto_rescan_enabled?: boole
 
     const { data, error } = await supabase
         .from('user_settings')
-        .update(settings)
+        .update(settings) as any
         .eq('user_id', userId)
         .select()
         .single();
@@ -330,7 +330,7 @@ export async function cacheStats(username: string, data: unknown, expiresInMinut
 
     const { error } = await supabase
         .from('github_stats_cache')
-        .upsert({ username: username.toLowerCase(), data, expires_at: expiresAt.toISOString() });
+        .upsert({ username: username.toLowerCase(), data, expires_at: expiresAt.toISOString() }) as any;
 
     return { error };
 }
