@@ -12,6 +12,7 @@ import { Comparator } from '@/components/Comparator';
 import { TargetRival } from '@/components/TargetRival';
 import { RivalsPanel } from '@/components/RivalsPanel';
 import { Graphs } from '@/components/Graphs';
+import { SocialGraph } from '@/components/SocialGraph';
 import { useGitStore, useAuthSync } from '@/store/useGitStore';
 
 type AuthView = null | 'signin' | 'signup';
@@ -85,8 +86,9 @@ export default function Home() {
                     {currentView === 'feed' && <Feed />}
                     {currentView === 'comparator' && <Comparator />}
                     {currentView === 'target' && <TargetRival />}
+                    {currentView === 'social' && <SocialGraph />}
                 </main>
-                <RivalsPanel />
+                {currentView !== 'social' && <RivalsPanel />}
             </div>
         </div>
     );

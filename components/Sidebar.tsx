@@ -2,7 +2,7 @@
 
 import { useGitStore } from '@/store/useGitStore';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
-import { Github, LayoutDashboard, Activity, Swords, Crosshair, Timer, LogOut, ChevronUp, BarChart2 } from 'lucide-react';
+import { Github, LayoutDashboard, Activity, Swords, Crosshair, Timer, LogOut, ChevronUp, BarChart2, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClerk } from '@clerk/nextjs';
 import { useMemo, useState, useEffect } from 'react';
@@ -31,6 +31,7 @@ export function Sidebar() {
         { id: 'feed' as const, label: 'Activity', icon: Activity },
         { id: 'comparator' as const, label: 'Compare', icon: Swords },
         { id: 'target' as const, label: 'Target', icon: Crosshair },
+        { id: 'social' as const, label: 'Social Circle', icon: Users },
     ];
 
     const [currentTime, setCurrentTime] = useState(() => Date.now());

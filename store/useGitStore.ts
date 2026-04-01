@@ -18,7 +18,7 @@ import {
 } from '@/lib/auth';
 import { syncClerkUserToSupabase } from '@/lib/clerk-auth';
 
-type ViewType = 'home' | 'feed' | 'comparator' | 'target' | 'graphs';
+type ViewType = 'home' | 'social' | 'feed' | 'comparator' | 'target' | 'graphs';
 
 interface GitState {
     // Auth state

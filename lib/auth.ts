@@ -87,7 +87,7 @@ export async function isAuthenticated() {
 export function onAuthStateChange() {
     // Clerk handles auth state via useAuth hook
     // This function is kept for backwards compatibility
-    return { data: { subscription: { unsubscribe: () => {} } }, error: null };
+    return { data: { subscription: { unsubscribe: () => { } } }, error: null };
 }
 
 // ========================
@@ -315,17 +315,27 @@ export async function updateRivalsEnabledStates(clerkUserId: string, rivalsEnabl
 }
 
 // ========================
-// Stats Cache (Optional)
+// DB Cache (Supabase)
 // ========================
 
+// Default TTLs per category (in minutes)
+export const CACHE_TTLS = {
+    profile: 24 * 60,     // 24 hours
+    stats: 30,            // 30 minutes
+    connections: 6 * 60,  // 6 hours
+} as const;
+
+export type CacheCategory = keyof typeof CACHE_TTLS;
+
 /**
- * Get cached stats for a username
+ * Get cached data for a username from Supabase
  */
-export async function getCachedStats(username: string) {
+export async function getCachedData<T = unknown>(category: CacheCategory, username: string): Promise<T | null> {
+    const key = `${category}:${username.toLowerCase()}`;
     const { data, error } = await supabase
         .from('github_stats_cache')
         .select('*')
-        .eq('username', username.toLowerCase())
+        .eq('username', key)
         .gt('expires_at', new Date().toISOString())
         .maybeSingle();
 
@@ -333,19 +343,27 @@ export async function getCachedStats(username: string) {
         return null;
     }
 
-    return data.data;
+    return data.data as T;
 }
 
 /**
- * Cache stats for a username
+ * Cache data for a username to Supabase
  */
-export async function cacheStats(username: string, data: unknown, expiresInMinutes: number = 5) {
+export async function cacheData(category: CacheCategory, username: string, data: unknown, ttlMinutes?: number): Promise<void> {
+    const key = `${category}:${username.toLowerCase()}`;
+    const ttl = ttlMinutes ?? CACHE_TTLS[category];
     const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + expiresInMinutes);
+    expiresAt.setMinutes(expiresAt.getMinutes() + ttl);
 
-    const { error } = await supabase
+    await supabase
         .from('github_stats_cache')
-        .upsert({ username: username.toLowerCase(), data, expires_at: expiresAt.toISOString() } as Record<string, unknown>);
-
-    return { error };
+        .upsert(
+            { username: key, data, expires_at: expiresAt.toISOString() } as Record<string, unknown>,
+            { onConflict: 'username' }
+        );
 }
+
+// Backwards-compatible aliases
+export const getCachedStats = (username: string) => getCachedData('stats', username);
+export const cacheStats = (username: string, data: unknown, ttlMinutes?: number) => cacheData('stats', username, data, ttlMinutes);
+

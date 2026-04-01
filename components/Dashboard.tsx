@@ -5,7 +5,7 @@ import { useGitHubStats } from '@/hooks/useGitHubStats';
 import { useGitHubEvents } from '@/hooks/useGitHubEvents';
 import { formatTimeAgo } from '@/lib/utils';
 import { useMemo } from 'react';
-import { GitCommit, GitPullRequest, CircleDot, Star, BookMarked, Users, RefreshCw, Activity, CheckCircle2, GitBranch } from 'lucide-react';
+import { GitCommit, GitPullRequest, CircleDot, Star, BookMarked, Users, RefreshCw, Activity, CheckCircle2, GitBranch, Code2, MapPin, Building2, Link as LinkIcon, CalendarDays } from 'lucide-react';
 
 export function Dashboard() {
     const { mainUser, rivals, enabledRivals } = useGitStore();
@@ -50,22 +50,73 @@ export function Dashboard() {
     return (
         <div className="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground tracking-tight">Insights</h1>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        @{mainUser} vs {activeRivals.length} rival{activeRivals.length === 1 ? '' : 's'}
-                    </p>
+            {mainStats ? (
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={mainStats.avatarUrl}
+                            alt={`${mainStats.login}'s avatar`}
+                            className="w-14 h-14 md:w-16 md:h-16 rounded-full border border-border/50 flex-shrink-0"
+                        />
+                        <div>
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <h1 className="text-xl font-bold text-foreground tracking-tight leading-none">
+                                    {mainStats.name}
+                                </h1>
+                                <a href={`https://github.com/${mainStats.login}`} target="_blank" rel="noreferrer" className="text-sm text-primary hover:underline">
+                                    @{mainStats.login}
+                                </a>
+                                {mainStats.status && (mainStats.status.emoji || mainStats.status.message) && (
+                                    <span className="text-foreground/70 bg-accent/30 px-2 py-0.5 rounded-full text-xs border border-border/40">
+                                        {mainStats.status.emoji && <span>{mainStats.status.emoji} </span>}
+                                        {mainStats.status.message && <span>{mainStats.status.message}</span>}
+                                    </span>
+                                )}
+                            </div>
+                            {mainStats.bio && (
+                                <p className="text-sm text-muted-foreground mt-1.5 max-w-lg leading-snug">
+                                    {mainStats.bio}
+                                </p>
+                            )}
+                            <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground mt-2">
+                                {mainStats.location && (
+                                    <span className="flex items-center gap-1"><MapPin size={12} />{mainStats.location}</span>
+                                )}
+                                {mainStats.company && (
+                                    <span className="flex items-center gap-1"><Building2 size={12} />{mainStats.company}</span>
+                                )}
+                                {mainStats.websiteUrl && (
+                                    <a href={mainStats.websiteUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-foreground transition-colors">
+                                        <LinkIcon size={12} />{new URL(mainStats.websiteUrl).hostname}
+                                    </a>
+                                )}
+                                {mainStats.createdAt && (
+                                    <span className="flex items-center gap-1"><CalendarDays size={12} />Joined {new Date(mainStats.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+                                )}
+                                
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleRescan}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium border border-border rounded-md text-foreground bg-accent/30 hover:bg-accent transition-colors disabled:opacity-50 flex-shrink-0 self-start"
+                    >
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                        {loading ? 'Syncing...' : 'Rescan'}
+                    </button>
                 </div>
-                <button
-                    onClick={handleRescan}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium border border-border rounded-md text-foreground bg-accent/30 hover:bg-accent transition-colors disabled:opacity-50"
-                >
-                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                    {loading ? 'Syncing...' : 'Rescan'}
-                </button>
-            </div>
+            ) : (
+                <div className="flex items-center gap-4 mb-2">
+                    <div className="w-16 h-16 rounded-full bg-muted animate-pulse" />
+                    <div>
+                        <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+                        <div className="h-4 w-48 bg-muted rounded animate-pulse mt-2" />
+                    </div>
+                </div>
+            )}
 
             {/* Bento Grid Layout */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -75,16 +126,26 @@ export function Dashboard() {
                     <>
                         {/* Commits Bento Card */}
                         <div className="md:col-span-12 lg:col-span-6 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[160px]">
-                            <div className="flex justify-between items-start mb-6">
+                            <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
                                         <GitCommit size={16} className="text-muted-foreground" />
-                                        <span>Commits <span className="text-muted-foreground/50">(past year)</span></span>
+                                        <span>Commits</span>
                                     </div>
-                                    <p className="text-4xl font-semibold text-foreground tabular-nums tracking-tight">
-                                        {mainStats.totalCommitsYear.toLocaleString()}
-                                    </p>
+                                    <div className="flex items-end gap-3">
+                                        <p className="text-4xl font-semibold text-foreground tabular-nums tracking-tight">
+                                            {mainStats.totalCommitsAllTime > 0 ? mainStats.totalCommitsAllTime.toLocaleString() : mainStats.totalCommitsYear.toLocaleString()}
+                                        </p>
+                                        {mainStats.totalCommitsAllTime > 0 && (
+                                            <p className="text-sm text-muted-foreground mb-1 tabular-nums">
+                                                {mainStats.totalCommitsYear.toLocaleString()} this year
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
+                                {mainStats.totalCommitsAllTime > 0 && (
+                                    <span className="text-xs text-muted-foreground/60 mt-1">all time</span>
+                                )}
                             </div>
                             {latestPush && (
                                 <div className="mt-auto pt-4 border-t border-border/40">
@@ -186,8 +247,34 @@ export function Dashboard() {
                             )}
                         </div>
 
-                        {/* Smaller Stats Row (Repos, Stars, Followers) */}
-                        <div className="md:col-span-4 lg:col-span-4 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[120px]">
+
+
+                        {/* Smaller Stats Row (Language, Repos, Stars, Followers) */}
+                        <div className="md:col-span-6 lg:col-span-3 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[120px]">
+                            <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                                <Code2 size={16} className="text-muted-foreground" />
+                                <span>Top Language</span>
+                            </div>
+                            {mainStats.topLanguage ? (
+                                <div className="mt-auto">
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-3 h-3 rounded-full"
+                                            style={{ backgroundColor: mainStats.topLanguage.color }}
+                                        />
+                                        <p className="text-2xl font-semibold text-foreground tracking-tight">
+                                            {mainStats.topLanguage.name}
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-2xl font-semibold text-foreground tracking-tight mt-auto">
+                                    N/A
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="md:col-span-6 lg:col-span-3 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[120px]">
                             <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
                                 <BookMarked size={16} className="text-muted-foreground" />
                                 <span>Repositories</span>
@@ -202,7 +289,7 @@ export function Dashboard() {
                             )}
                         </div>
 
-                        <div className="md:col-span-4 lg:col-span-4 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[120px]">
+                        <div className="md:col-span-6 lg:col-span-3 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[120px]">
                             <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
                                 <Star size={16} className="text-muted-foreground" />
                                 <span>Stars Earned</span>
@@ -212,7 +299,7 @@ export function Dashboard() {
                             </p>
                         </div>
 
-                        <div className="md:col-span-4 lg:col-span-4 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[120px]">
+                        <div className="md:col-span-6 lg:col-span-3 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[120px]">
                             <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
                                 <Users size={16} className="text-muted-foreground" />
                                 <span>Followers</span>
