@@ -60,7 +60,7 @@ export function Graphs() {
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 grid grid-cols-12 grid-rows-2 gap-4">
+            <div className="flex-1 min-h-0 grid grid-cols-12 md:grid-rows-2 gap-4">
                 {activeRivals.length > 0 ? (
                     <>
                         {/* Contributions - Top Half */}

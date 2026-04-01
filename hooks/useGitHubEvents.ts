@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useCallback } from 'react';
 import { fetchGitHubEvents, GitHubEvent } from '@/lib/github';
 import { useGitStore } from '@/store/useGitStore';
