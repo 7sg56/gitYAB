@@ -51,69 +51,82 @@ export function Dashboard() {
         <div className="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
             {/* Header */}
             {mainStats ? (
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                            src={mainStats.avatarUrl}
-                            alt={`${mainStats.login}'s avatar`}
-                            className="w-14 h-14 md:w-16 md:h-16 rounded-full border border-border/50 flex-shrink-0"
-                        />
-                        <div>
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <h1 className="text-xl font-bold text-foreground tracking-tight leading-none">
-                                    {mainStats.name}
-                                </h1>
-                                <a href={`https://github.com/${mainStats.login}`} target="_blank" rel="noreferrer" className="text-sm text-primary hover:underline">
-                                    @{mainStats.login}
-                                </a>
-                                {mainStats.status && (mainStats.status.emoji || mainStats.status.message) && (
-                                    <span className="text-foreground/70 bg-accent/30 px-2 py-0.5 rounded-full text-xs border border-border/40">
-                                        {mainStats.status.emoji && <span>{mainStats.status.emoji} </span>}
-                                        {mainStats.status.message && <span>{mainStats.status.message}</span>}
-                                    </span>
-                                )}
+                <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-card/20 p-6 md:p-10 mesh-gradient group">
+                    {/* Decorative elements */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 transition-colors group-hover:bg-primary/10" />
+
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8">
+                            <div className="relative">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={mainStats.avatarUrl}
+                                    alt={`${mainStats.login}'s avatar`}
+                                    className="w-24 h-24 md:w-32 md:h-32 rounded-3xl border-2 border-border/50 shadow-2xl object-cover ring-4 ring-primary/5"
+                                />
                             </div>
-                            {mainStats.bio && (
-                                <p className="text-sm text-muted-foreground mt-1.5 max-w-lg leading-snug">
-                                    {mainStats.bio}
-                                </p>
-                            )}
-                            <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground mt-2">
-                                {mainStats.location && (
-                                    <span className="flex items-center gap-1"><MapPin size={12} />{mainStats.location}</span>
-                                )}
-                                {mainStats.company && (
-                                    <span className="flex items-center gap-1"><Building2 size={12} />{mainStats.company}</span>
-                                )}
-                                {mainStats.websiteUrl && (
-                                    <a href={mainStats.websiteUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-foreground transition-colors">
-                                        <LinkIcon size={12} />{new URL(mainStats.websiteUrl).hostname}
+
+                            <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                                <div className="flex items-center gap-4 flex-wrap justify-center md:justify-start">
+                                    <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight py-1">
+                                        {mainStats.name}
+                                    </h1>
+                                </div>
+
+                                <div className="flex items-center gap-2 mt-1">
+                                    <a href={`https://github.com/${mainStats.login}`} target="_blank" rel="noreferrer" className="text-lg font-medium text-primary hover:text-primary/80 transition-colors">
+                                        @{mainStats.login}
                                     </a>
+                                </div>
+
+                                {mainStats.bio && (
+                                    <p className="text-base text-muted-foreground mt-3 max-w-xl leading-relaxed">
+                                        {mainStats.bio}
+                                    </p>
                                 )}
-                                {mainStats.createdAt && (
-                                    <span className="flex items-center gap-1"><CalendarDays size={12} />Joined {new Date(mainStats.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
-                                )}
-                                
+
+                                <div className="flex items-center flex-wrap justify-center md:justify-start gap-x-5 gap-y-2 text-sm text-muted-foreground mt-5">
+                                    {mainStats.location && (
+                                        <span className="flex items-center gap-2 hover:text-foreground transition-colors cursor-default"><MapPin size={14} className="text-primary/70" />{mainStats.location}</span>
+                                    )}
+                                    {mainStats.company && (
+                                        <span className="flex items-center gap-2 hover:text-foreground transition-colors cursor-default"><Building2 size={14} className="text-primary/70" />{mainStats.company}</span>
+                                    )}
+                                    {mainStats.websiteUrl && (
+                                        <a href={mainStats.websiteUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-primary transition-colors">
+                                            <LinkIcon size={14} className="text-primary/70" />{new URL(mainStats.websiteUrl).hostname}
+                                        </a>
+                                    )}
+                                    {mainStats.createdAt && (
+                                        <span className="flex items-center gap-2 hover:text-foreground transition-colors cursor-default"><CalendarDays size={14} className="text-primary/70" />Joined {new Date(mainStats.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <button
-                        onClick={handleRescan}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium border border-border rounded-md text-foreground bg-accent/30 hover:bg-accent transition-colors disabled:opacity-50 flex-shrink-0 self-start"
-                    >
-                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                        {loading ? 'Syncing...' : 'Rescan'}
-                    </button>
+                        <div className="flex flex-row md:flex-col items-center gap-3 self-center md:self-end mt-4 md:mt-0">
+                            <button
+                                onClick={handleRescan}
+                                disabled={loading}
+                                className="flex items-center gap-2 px-4 py-2 text-xs font-semibold border border-border rounded-xl text-foreground bg-accent/30 hover:bg-accent transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                                {loading ? 'Syncing...' : 'Rescan'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             ) : (
-                <div className="flex items-center gap-4 mb-2">
-                    <div className="w-16 h-16 rounded-full bg-muted animate-pulse" />
-                    <div>
-                        <div className="h-6 w-32 bg-muted rounded animate-pulse" />
-                        <div className="h-4 w-48 bg-muted rounded animate-pulse mt-2" />
+                <div className="flex flex-col md:flex-row items-center gap-8 p-10 bg-card/20 rounded-3xl border border-border/50 animate-pulse">
+                    <div className="w-32 h-32 rounded-3xl bg-muted" />
+                    <div className="flex-1 space-y-4">
+                        <div className="h-10 w-64 bg-muted rounded-xl" />
+                        <div className="h-6 w-full max-w-md bg-muted rounded-lg" />
+                        <div className="flex gap-4">
+                            <div className="h-5 w-24 bg-muted rounded-md" />
+                            <div className="h-5 w-24 bg-muted rounded-md" />
+                            <div className="h-5 w-24 bg-muted rounded-md" />
+                        </div>
                     </div>
                 </div>
             )}
@@ -125,27 +138,20 @@ export function Dashboard() {
                 {mainStats ? (
                     <>
                         {/* Commits Bento Card */}
-                        <div className="md:col-span-12 lg:col-span-6 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[160px]">
+                        <div className="md:col-span-12 lg:col-span-6 glass-card p-6 flex flex-col justify-between min-h-[180px]">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
-                                    <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
-                                        <GitCommit size={16} className="text-muted-foreground" />
+                                    <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                        <GitCommit size={16} className="text-primary" />
                                         <span>Commits</span>
                                     </div>
-                                    <div className="flex items-end gap-3">
-                                        <p className="text-4xl font-semibold text-foreground tabular-nums tracking-tight">
-                                            {mainStats.totalCommitsAllTime > 0 ? mainStats.totalCommitsAllTime.toLocaleString() : mainStats.totalCommitsYear.toLocaleString()}
+                                    <div className="flex items-baseline gap-3">
+                                        <p className="text-5xl font-bold text-foreground tabular-nums tracking-tighter">
+                                            {mainStats.totalCommitsYear.toLocaleString()}
                                         </p>
-                                        {mainStats.totalCommitsAllTime > 0 && (
-                                            <p className="text-sm text-muted-foreground mb-1 tabular-nums">
-                                                {mainStats.totalCommitsYear.toLocaleString()} this year
-                                            </p>
-                                        )}
+                                        <span className="text-sm font-medium text-muted-foreground/60">THIS YEAR</span>
                                     </div>
                                 </div>
-                                {mainStats.totalCommitsAllTime > 0 && (
-                                    <span className="text-xs text-muted-foreground/60 mt-1">all time</span>
-                                )}
                             </div>
                             {latestPush && (
                                 <div className="mt-auto pt-4 border-t border-border/40">
@@ -176,14 +182,14 @@ export function Dashboard() {
                         </div>
 
                         {/* Pull Requests Bento Card */}
-                        <div className="md:col-span-6 lg:col-span-3 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[160px]">
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[180px]">
                             <div className="flex justify-between items-start mb-6">
                                 <div>
-                                    <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
-                                        <GitPullRequest size={16} className="text-muted-foreground" />
+                                    <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                        <GitPullRequest size={16} className="text-purple-400" />
                                         <span>Pull Requests</span>
                                     </div>
-                                    <p className="text-4xl font-semibold text-foreground tabular-nums tracking-tight">
+                                    <p className="text-5xl font-bold text-foreground tabular-nums tracking-tighter">
                                         {mainStats.totalPRsYear.toLocaleString()}
                                     </p>
                                 </div>
@@ -212,19 +218,39 @@ export function Dashboard() {
                         </div>
 
                         {/* Issues Bento Card */}
-                        <div className="md:col-span-6 lg:col-span-3 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[160px]">
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[180px]">
                             <div className="flex justify-between items-start mb-6">
                                 <div>
-                                    <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
-                                        <CircleDot size={16} className="text-muted-foreground" />
+                                    <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                        <CircleDot size={16} className="text-emerald-400" />
                                         <span>Issues</span>
                                     </div>
-                                    <p className="text-4xl font-semibold text-foreground tabular-nums tracking-tight">
+                                    <p className="text-5xl font-bold text-foreground tabular-nums tracking-tighter">
                                         {mainStats.totalIssuesYear.toLocaleString()}
                                     </p>
                                 </div>
                             </div>
-                            {latestIssue && (
+                            {mainStats.latestIssues && mainStats.latestIssues.length > 0 ? (
+                                <div className="mt-auto pt-4 border-t border-border/40 space-y-3">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Recent Issues</p>
+                                    <div className="space-y-2">
+                                        {mainStats.latestIssues.slice(0, 3).map((issue) => (
+                                            <div key={issue.number} className="group/issue">
+                                                <a
+                                                    href={issue.url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="flex items-start gap-2 text-xs text-foreground/80 hover:text-primary transition-colors line-clamp-1"
+                                                >
+                                                    <span className="text-muted-foreground font-mono">#{issue.number}</span>
+                                                    <span className="flex-1 truncate">{issue.title}</span>
+                                                </a>
+                                                <p className="text-[10px] text-muted-foreground pl-7 truncate">{issue.repository.name}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : latestIssue && (
                                 <div className="mt-auto pt-4 border-t border-border/40">
                                     <div className="flex items-center justify-between gap-2 mb-2">
                                         <span className={`text-xs font-medium flex items-center gap-1.5 ${latestIssuePayload?.action === 'closed' ? 'text-purple-400' : 'text-emerald-400'}`}>
@@ -250,61 +276,61 @@ export function Dashboard() {
 
 
                         {/* Smaller Stats Row (Language, Repos, Stars, Followers) */}
-                        <div className="md:col-span-6 lg:col-span-3 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[120px]">
-                            <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                                <Code2 size={16} className="text-muted-foreground" />
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[140px]">
+                            <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                <Code2 size={16} className="text-blue-400" />
                                 <span>Top Language</span>
                             </div>
                             {mainStats.topLanguage ? (
                                 <div className="mt-auto">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-3">
                                         <div
-                                            className="w-3 h-3 rounded-full"
+                                            className="w-4 h-4 rounded-full shadow-sm ring-2 ring-background"
                                             style={{ backgroundColor: mainStats.topLanguage.color }}
                                         />
-                                        <p className="text-2xl font-semibold text-foreground tracking-tight">
+                                        <p className="text-3xl font-bold text-foreground tracking-tight">
                                             {mainStats.topLanguage.name}
                                         </p>
                                     </div>
                                 </div>
                             ) : (
-                                <p className="text-2xl font-semibold text-foreground tracking-tight mt-auto">
+                                <p className="text-3xl font-bold text-foreground tracking-tight mt-auto">
                                     N/A
                                 </p>
                             )}
                         </div>
 
-                        <div className="md:col-span-6 lg:col-span-3 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[120px]">
-                            <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                                <BookMarked size={16} className="text-muted-foreground" />
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[140px]">
+                            <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                <BookMarked size={16} className="text-amber-400" />
                                 <span>Repositories</span>
                             </div>
-                            <p className="text-3xl font-semibold text-foreground tabular-nums tracking-tight mb-2">
+                            <p className="text-4xl font-bold text-foreground tabular-nums tracking-tighter mb-2">
                                 {mainStats.totalRepos.toLocaleString()}
                             </p>
                             {latestCreateRepo && (
-                                <div className="mt-auto text-xs text-muted-foreground pt-3 border-t border-border/40 truncate">
-                                    <span className="text-foreground">{latestCreateRepo.repo.name}</span>
+                                <div className="mt-auto text-[10px] text-muted-foreground pt-3 border-t border-border/40 truncate">
+                                    LATEST: <span className="text-foreground/90 font-medium">{latestCreateRepo.repo.name.split('/').pop()}</span>
                                 </div>
                             )}
                         </div>
 
-                        <div className="md:col-span-6 lg:col-span-3 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[120px]">
-                            <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                                <Star size={16} className="text-muted-foreground" />
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[140px]">
+                            <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                <Star size={16} className="text-yellow-400" />
                                 <span>Stars Earned</span>
                             </div>
-                            <p className="text-3xl font-semibold text-foreground tabular-nums tracking-tight mt-auto">
+                            <p className="text-4xl font-bold text-foreground tabular-nums tracking-tighter mt-auto">
                                 {mainStats.totalStars.toLocaleString()}
                             </p>
                         </div>
 
-                        <div className="md:col-span-6 lg:col-span-3 bg-card/40 border border-border/60 rounded-xl p-6 hover:border-border transition-colors flex flex-col justify-between min-h-[120px]">
-                            <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                                <Users size={16} className="text-muted-foreground" />
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[140px]">
+                            <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                <Users size={16} className="text-pink-400" />
                                 <span>Followers</span>
                             </div>
-                            <p className="text-3xl font-semibold text-foreground tabular-nums tracking-tight mt-auto">
+                            <p className="text-4xl font-bold text-foreground tabular-nums tracking-tighter mt-auto">
                                 {mainStats.followers.toLocaleString()}
                             </p>
                         </div>

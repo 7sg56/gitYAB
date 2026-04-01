@@ -5,7 +5,6 @@ export interface GitHubUserStats {
     followers: number;
     following: number;
     totalCommitsYear: number;
-    totalCommitsAllTime: number;
     totalIssuesYear: number;
     totalPRsYear: number;
     totalStars: number;
@@ -18,6 +17,14 @@ export interface GitHubUserStats {
     twitterUsername?: string | null;
     createdAt?: string | null;
     status?: { emoji?: string | null; message?: string | null } | null;
+    latestIssues?: Array<{
+        title: string;
+        url: string;
+        number: number;
+        state: string;
+        createdAt: string;
+        repository: { name: string };
+    }>;
 }
 
 export interface GitHubEvent {
@@ -77,6 +84,18 @@ const STATS_QUERY = `
         totalPullRequestContributions
         restrictedContributionsCount
       }
+      issues(first: 5, orderBy: {field: CREATED_AT, direction: DESC}) {
+        nodes {
+          title
+          url
+          number
+          state
+          createdAt
+          repository {
+            name
+          }
+        }
+      }
     }
   }
 `;
@@ -135,6 +154,16 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
                         totalPullRequestContributions: number;
                         restrictedContributionsCount: number;
                     };
+                    issues: {
+                        nodes: Array<{
+                            title: string;
+                            url: string;
+                            number: number;
+                            state: string;
+                            createdAt: string;
+                            repository: { name: string };
+                        }>;
+                    };
                 } | null;
             };
             errors?: Array<{ type?: string; message?: string }>;
@@ -183,22 +212,6 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
             }
         }
 
-        // Fetch all-time commit count via search API
-        let totalCommitsAllTime = 0;
-        try {
-            const searchRes = await fetch(`https://api.github.com/search/commits?q=author:${username}`, {
-                headers: {
-                    Authorization: `Bearer ${pat}`,
-                    Accept: 'application/vnd.github.cloak-preview+json',
-                },
-            });
-            if (searchRes.ok) {
-                const searchData = await searchRes.json() as { total_count?: number };
-                totalCommitsAllTime = searchData.total_count || 0;
-            }
-        } catch {
-            // Non-critical, fallback to 0
-        }
 
         return {
             login: user.login,
@@ -209,7 +222,6 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
             totalRepos: user.repositories?.totalCount || 0,
             totalStars,
             totalCommitsYear: (user.contributionsCollection?.totalCommitContributions || 0) + (user.contributionsCollection?.restrictedContributionsCount || 0),
-            totalCommitsAllTime,
             totalIssuesYear: user.contributionsCollection?.totalIssueContributions || 0,
             totalPRsYear: user.contributionsCollection?.totalPullRequestContributions || 0,
             topLanguage,
@@ -220,6 +232,7 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
             twitterUsername: user.twitterUsername,
             createdAt: user.createdAt,
             status: user.status,
+            latestIssues: user.issues?.nodes || [],
         };
     } catch (error: unknown) {
         if (error instanceof Error && (error.message === 'RATE_LIMIT' || error.message === 'BAD_CREDENTIALS')) throw error;
