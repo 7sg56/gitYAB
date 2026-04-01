@@ -62,11 +62,50 @@ export async function getCurrentUserRecord() {
         return { data: null, error: authError };
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_id', user.id)
-        .single();
+        .maybeSingle();
+
+    // In GitHub SSO, the username is under user_name or preferred_username
+    // In our old email flow, it was github_username
+    const actualGithubUsername = user.user_metadata?.preferred_username ||
+        user.user_metadata?.user_name ||
+        user.user_metadata?.github_username || '';
+
+    if (!data && !error) {
+        // Automatically create the user record if the trigger failed or is missing
+        const { data: newData, error: insertError } = await supabase
+            .from('users')
+            .insert({
+                auth_id: user.id,
+                github_username: actualGithubUsername,
+                encrypted_pat: ''
+            })
+            .select()
+            .maybeSingle();
+
+        if (newData) {
+            // Also create user_settings with explicit defaults
+            await supabase.from('user_settings').insert({
+                user_id: newData.id,
+                right_panel_open: true,
+                auto_rescan_enabled: false,
+                auto_rescan_interval_ms: 600000 // 10 minutes
+            });
+        }
+
+        data = newData;
+        error = insertError;
+    } else if (data && !data.github_username && actualGithubUsername) {
+        // Self-healing: if the row was created previously with an empty username, fix it
+        await supabase
+            .from('users')
+            .update({ github_username: actualGithubUsername })
+            .eq('id', data.id);
+        data.github_username = actualGithubUsername;
+    }
 
     return { data, error };
 }

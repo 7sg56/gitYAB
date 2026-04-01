@@ -51,24 +51,14 @@ function decryptPatFromStorage(encryptedPat: string): string {
 // ========================
 
 /**
- * Sign up a new user with email and password
+ * Sign in with GitHub OAuth
  */
-export async function signUp(email: string, password: string) {
-    const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-    });
-
-    return { data, error };
-}
-
-/**
- * Sign in with email and password
- */
-export async function signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+export async function signInWithGithub() {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+            redirectTo: `${window.location.origin}/`,
+        },
     });
 
     return { data, error };
@@ -104,9 +94,9 @@ export function onAuthStateChange(callback: (event: string, session: any) => voi
 // ========================
 
 /**
- * Complete initial setup - save GitHub username and PAT
+ * Complete initial setup - save PAT
  */
-export async function completeSetup(githubUsername: string, pat: string) {
+export async function completeSetup(pat: string) {
     const userId = await getCurrentUserId();
     if (!userId) {
         return { error: { message: 'User not authenticated' } };
@@ -114,10 +104,9 @@ export async function completeSetup(githubUsername: string, pat: string) {
 
     const encryptedPat = encryptPatForStorage(pat);
 
-    const { data, error } = await (supabase
+    const { data, error } = await supabase
         .from('users')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .update({ github_username: githubUsername, encrypted_pat: encryptedPat }) as any)
+        .update({ encrypted_pat: encryptedPat })
         .eq('id', userId)
         .select()
         .single();
@@ -146,7 +135,11 @@ export async function getPat(): Promise<string | null> {
  */
 export async function getGithubUsername(): Promise<string | null> {
     const { data, error } = await getCurrentUserRecord();
-    if (error || !data) {
+    if (error) {
+        console.error('Error fetching user record:', error);
+        return null;
+    }
+    if (!data) {
         return null;
     }
     return data.github_username;
@@ -178,7 +171,7 @@ export async function getUserSettings() {
         .from('user_settings')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
     return error ? null : data;
 }

@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
-    signIn,
-    signUp,
+    signInWithGithub,
     signOut,
     completeSetup,
     getPat,
@@ -42,10 +41,9 @@ interface GitState {
     apiError: string | null;
 
     // Auth actions
-    signIn: (email: string, password: string) => Promise<{ error: { message: string } | null }>;
-    signUp: (email: string, password: string) => Promise<{ error: { message: string } | null }>;
+    signInWithGithub: () => Promise<{ error: { message: string } | null }>;
     signOut: () => Promise<{ error: { message: string } | null }>;
-    completeSetup: (githubUsername: string, pat: string) => Promise<{ error: { message: string } | null }>;
+    completeSetup: (pat: string) => Promise<{ error: { message: string } | null }>;
     refreshAuthState: () => Promise<void>;
 
     // Data actions
@@ -64,6 +62,9 @@ interface GitState {
     getActiveRivals: () => string[];
     syncFromDatabase: () => Promise<void>;
 }
+
+// Guard against concurrent refreshAuthState calls
+let isRefreshing = false;
 
 export const useGitStore = create<GitState>()(
     persist(
@@ -87,33 +88,16 @@ export const useGitStore = create<GitState>()(
             apiError: null,
 
             // Auth actions
-            signIn: async (email: string, password: string) => {
+            signInWithGithub: async () => {
                 set({ isAuthenticating: true, apiError: null });
-                const result = await signIn(email, password);
+                const result = await signInWithGithub();
 
                 if (result.error) {
                     set({ isAuthenticating: false, apiError: result.error.message });
                     return { error: result.error };
                 }
 
-                if (result.data.user) {
-                    await get().refreshAuthState();
-                }
-
-                set({ isAuthenticating: false });
-                return { error: null };
-            },
-
-            signUp: async (email: string, password: string) => {
-                set({ isAuthenticating: true, apiError: null });
-                const result = await signUp(email, password);
-
-                if (result.error) {
-                    set({ isAuthenticating: false, apiError: result.error.message });
-                    return { error: result.error };
-                }
-
-                set({ isAuthenticating: false });
+                // Redirect happens automatically
                 return { error: null };
             },
 
@@ -134,21 +118,22 @@ export const useGitStore = create<GitState>()(
                 return { error };
             },
 
-            completeSetup: async (githubUsername: string, pat: string) => {
-                set({ isLoading: true, apiError: null });
-                const { error } = await completeSetup(githubUsername, pat);
+            completeSetup: async (pat: string) => {
+                set({ apiError: null });
+                const result = await completeSetup(pat);
 
-                if (error) {
-                    set({ isLoading: false, apiError: error.message });
-                    return { error };
+                if (result.error) {
+                    set({ apiError: result.error.message });
+                    return { error: result.error };
                 }
 
                 await get().refreshAuthState();
-                set({ isLoading: false });
                 return { error: null };
             },
 
             refreshAuthState: async () => {
+                if (isRefreshing) return;
+                isRefreshing = true;
                 set({ isLoading: true });
                 try {
                     // Check auth status
@@ -183,6 +168,7 @@ export const useGitStore = create<GitState>()(
                     console.error('Error refreshing auth state:', error);
                 } finally {
                     set({ isLoading: false, isAuthenticating: false });
+                    isRefreshing = false;
                 }
             },
 

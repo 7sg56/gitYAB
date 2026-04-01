@@ -169,7 +169,11 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO public.users (auth_id, github_username, encrypted_pat)
-    VALUES (NEW.id, '', '');
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'github_username', ''),
+        ''
+    );
     INSERT INTO public.user_settings (user_id)
     VALUES ((SELECT id FROM public.users WHERE auth_id = NEW.id));
     RETURN NEW;

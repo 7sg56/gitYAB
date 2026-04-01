@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Github, KeyRound, User, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Github, KeyRound, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useGitStore } from '@/store/useGitStore';
 
 export function SetupModal() {
-    const { pat, mainUser, completeSetup, apiError, setApiError, isLoading, hasSetupCompleted } = useGitStore();
+    const { pat, completeSetup, apiError, setApiError, hasSetupCompleted } = useGitStore();
     const [initialized, setInitialized] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [inputPat, setInputPat] = useState('');
-    const [inputUser, setInputUser] = useState('');
 
     const isInvalidToken = apiError === 'Invalid GitHub Personal Access Token. Please check your credentials.';
     const isVisible = !hasSetupCompleted || isInvalidToken;
@@ -17,7 +17,6 @@ export function SetupModal() {
     useEffect(() => {
         /* eslint-disable react-hooks/set-state-in-effect */
         if (isVisible && !initialized) {
-            setInputUser(mainUser);
             setInputPat(pat);
             setInitialized(true);
         }
@@ -25,14 +24,17 @@ export function SetupModal() {
             setInitialized(false);
         }
         /* eslint-enable react-hooks/set-state-in-effect */
-    }, [isVisible, mainUser, pat, initialized]);
+    }, [isVisible, pat, initialized]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isLoading) return;
+        if (isSubmitting) return;
 
-        if (inputPat.trim() && inputUser.trim()) {
-            const result = await completeSetup(inputUser.trim(), inputPat.trim());
+        if (inputPat.trim()) {
+            setIsSubmitting(true);
+            const result = await completeSetup(inputPat.trim());
+            setIsSubmitting(false);
+
             if (!result.error) {
                 setInputPat('');
             } else if (isInvalidToken) {
@@ -60,26 +62,11 @@ export function SetupModal() {
                     </div>
                 ) : (
                     <p className="text-sm text-muted-foreground mb-5">
-                        Enter your GitHub username and a Personal Access Token to get started.
+                        Please provide a Personal Access Token to enable competitive tracking.
                     </p>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">Username</label>
-                        <div className="relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-                            <input
-                                type="text"
-                                required
-                                value={inputUser}
-                                onChange={(e) => setInputUser(e.target.value)}
-                                placeholder="e.g. torvalds"
-                                className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
-                            />
-                        </div>
-                    </div>
-
                     <div className="space-y-1.5">
                         <div className="flex items-baseline justify-between">
                             <label className="text-xs font-medium text-muted-foreground">Personal Access Token</label>
@@ -110,10 +97,10 @@ export function SetupModal() {
 
                     <button
                         type="submit"
-                        disabled={isLoading}
+                        disabled={isSubmitting}
                         className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-success hover:bg-success/90 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isLoading ? (
+                        {isSubmitting ? (
                             <>
                                 <Loader2 size={14} className="animate-spin" />
                                 Saving...

@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
-import { AuthModal } from '@/components/AuthModal';
+import { LandingPage } from '@/components/LandingPage';
+import { AuthForm } from '@/components/AuthModal';
 import { SetupModal } from '@/components/SetupModal';
 import { UserMenu } from '@/components/UserMenu';
 import { Dashboard } from '@/components/Dashboard';
@@ -11,8 +12,11 @@ import { Comparator } from '@/components/Comparator';
 import { TargetRival } from '@/components/TargetRival';
 import { useGitStore } from '@/store/useGitStore';
 
+type AuthView = null | 'signin' | 'signup';
+
 export default function Home() {
   const { currentView, apiError, setApiError, isAuthenticated, isLoading, refreshAuthState } = useGitStore();
+  const [authView, setAuthView] = useState<AuthView>(null);
 
   // Refresh auth state on mount
   useEffect(() => {
@@ -31,16 +35,27 @@ export default function Home() {
     );
   }
 
-  // Show auth modal if not authenticated
+  // Unauthenticated flow: landing page or auth forms
   if (!isAuthenticated) {
-    return <AuthModal />;
+    if (authView === 'signin' || authView === 'signup') {
+      return (
+        <AuthForm onBack={() => setAuthView(null)} />
+      );
+    }
+    return (
+      <LandingPage
+        onSignIn={() => setAuthView('signin')}
+        onSignUp={() => setAuthView('signup')}
+      />
+    );
   }
 
+  // Authenticated app
   return (
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
       {apiError && (
         <div className="flex-none bg-danger/10 border-b border-danger/20 px-4 py-2 flex items-center justify-between z-[60]">
-          <p className="text-xs text-danger/90 font-medium">⚠️ {apiError}</p>
+          <p className="text-xs text-danger/90 font-medium">{apiError}</p>
           <button onClick={() => setApiError(null)} className="text-danger/70 hover:text-danger text-xs px-2 py-0.5 rounded hover:bg-danger/10 transition-colors">Dismiss</button>
         </div>
       )}
