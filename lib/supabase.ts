@@ -4,22 +4,16 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
 if (!supabaseUrl || !supabasePublishableKey) {
-    throw new Error('Missing Supabase environment variables. Check your .env.local file.');
+    throw new Error('Missing Supabase environment variables. Check your .env file.');
 }
 
-// Create client without strict typing to avoid inference issues
-export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
-    auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-    },
-});
+// Create client for data storage only (auth handled by Clerk)
+export const supabase = createClient(supabaseUrl, supabasePublishableKey);
 
 // Types for our database tables
 export interface User {
     id: string;
-    auth_id: string;
+    clerk_user_id: string;
     github_username: string;
     encrypted_pat: string;
     created_at: string;
@@ -52,30 +46,4 @@ export interface GitHubStatsCache {
     data: unknown;
     expires_at: string;
     created_at: string;
-}
-
-// Helper function to get current user's user record (not auth record)
-export async function getCurrentUserRecord() {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-        return { data: null, error: authError };
-    }
-
-    const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_id', user.id)
-        .single();
-
-    return { data, error };
-}
-
-// Helper function to get current user ID (from users table)
-export async function getCurrentUserId() {
-    const { data, error } = await getCurrentUserRecord();
-    if (error || !data) {
-        return null;
-    }
-    return data.id;
 }

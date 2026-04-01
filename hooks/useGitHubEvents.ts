@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useCallback } from 'react';
 import { fetchGitHubEvents, GitHubEvent } from '@/lib/github';
 import { useGitStore } from '@/store/useGitStore';
@@ -7,9 +8,12 @@ export function useGitHubEvents(usernames: string[]) {
     const { pat, setApiError } = useGitStore();
     const [events, setEvents] = useState<GitHubEvent[]>([]);
     const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const usernamesKey = usernames.join(',');
 
-    const fetchData = useCallback(async (forceRefresh = false) => {
+    const fetchData = useCallback(async (forceRefresh = false, pageNum = 1) => {
         await Promise.resolve();
         const currentUsers = usernamesKey ? usernamesKey.split(',') : [];
         if (!pat || currentUsers.length === 0) {
@@ -17,7 +21,8 @@ export function useGitHubEvents(usernames: string[]) {
             return;
         }
 
-        setLoading(true);
+        if (pageNum === 1) setLoading(true);
+        else setIsLoadingMore(true);
 
         let isRateLimited = false;
         let isBadCredentials = false;
@@ -26,16 +31,18 @@ export function useGitHubEvents(usernames: string[]) {
         for (let i = 0; i < currentUsers.length; i += 3) {
             const batch = currentUsers.slice(i, i + 3);
             const batchPromises = batch.map(async (username: string) => {
-                if (!forceRefresh) {
-                    const cached = getCache<GitHubEvent[]>(getCacheKey('events', username));
+                if (!forceRefresh && pageNum === 1) {
+                    const cached = getCache<GitHubEvent[]>(getCacheKey(`events_${pageNum}`, username));
                     if (cached) return cached.data;
                 }
 
                 if (isBadCredentials) return [];
 
                 try {
-                    const result = await fetchGitHubEvents(username, pat);
-                    setCache(getCacheKey('events', username), result, EVENTS_TTL);
+                    const result = await fetchGitHubEvents(username, pat, pageNum);
+                    if (pageNum === 1) {
+                        setCache(getCacheKey(`events_${pageNum}`, username), result, EVENTS_TTL);
+                    }
                     return result;
                 } catch (error: unknown) {
                     if (error instanceof Error) {
@@ -63,23 +70,66 @@ export function useGitHubEvents(usernames: string[]) {
         } else {
             setApiError(null);
         }
-        const allEvents = results.flat().sort((a: GitHubEvent, b: GitHubEvent) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
 
-        setEvents(allEvents);
-        setLoading(false);
+        const newEventsArray = results.flat();
+        if (newEventsArray.length === 0) {
+            setHasMore(false);
+        } else {
+            // A page is full if a user returned 30 events. If no user returned 30 events, we have reached the end of their event streams.
+            const hasFullPage = results.some(userEvents => userEvents.length === 30);
+            setHasMore(hasFullPage);
+        }
+
+        if (pageNum === 1) {
+            const allEvents = newEventsArray.sort((a: GitHubEvent, b: GitHubEvent) =>
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+            setEvents(allEvents);
+        } else {
+            setEvents(prev => {
+                const combined = [...prev, ...newEventsArray];
+                // Deduplicate by ID just in case
+                const uniqueIds = new Set();
+                const uniqueEvents = [];
+                for (const ev of combined) {
+                    if (!uniqueIds.has(ev.id)) {
+                        uniqueIds.add(ev.id);
+                        uniqueEvents.push(ev);
+                    }
+                }
+                return uniqueEvents.sort((a: GitHubEvent, b: GitHubEvent) =>
+                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
+            });
+        }
+
+        if (pageNum === 1) setLoading(false);
+        else setIsLoadingMore(false);
     }, [usernamesKey, pat, setApiError]);
 
     const rescan = useCallback(() => {
-        clearCache('events');
-        fetchData(true);
+        clearCache('events_1'); // Note: doesn't clear all pages, but typically enough
+        setPage(1);
+        setHasMore(true);
+        fetchData(true, 1);
     }, [fetchData]);
+
+    const loadMore = useCallback(() => {
+        if (!loading && !isLoadingMore && hasMore) {
+            setPage(p => p + 1);
+        }
+    }, [loading, isLoadingMore, hasMore]);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        fetchData();
-    }, [fetchData]);
+        fetchData(false, page);
+    }, [fetchData, page]);
 
-    return { events, loading, rescan };
+    useEffect(() => {
+        setPage(1);
+        setHasMore(true);
+        setEvents([]);
+        // The fetchData effect will handle fetching since fetchData depends on usernamesKey
+    }, [usernamesKey]);
+
+    return { events, loading, isLoadingMore, hasMore, loadMore, rescan };
 }

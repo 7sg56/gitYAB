@@ -3,11 +3,21 @@ export interface GitHubUserStats {
     avatarUrl: string;
     name: string;
     followers: number;
+    following: number;
     totalCommitsYear: number;
+    totalCommitsAllTime: number;
     totalIssuesYear: number;
     totalPRsYear: number;
     totalStars: number;
     totalRepos: number;
+    topLanguage?: { name: string; color: string } | null;
+    bio?: string | null;
+    company?: string | null;
+    location?: string | null;
+    websiteUrl?: string | null;
+    twitterUsername?: string | null;
+    createdAt?: string | null;
+    status?: { emoji?: string | null; message?: string | null } | null;
 }
 
 export interface GitHubEvent {
@@ -33,7 +43,20 @@ const STATS_QUERY = `
       name
       login
       avatarUrl
+      bio
+      company
+      location
+      websiteUrl
+      twitterUsername
+      createdAt
+      status {
+        emoji
+        message
+      }
       followers {
+        totalCount
+      }
+      following {
         totalCount
       }
       repositories(ownerAffiliations: OWNER, isFork: false, first: 100, privacy: PUBLIC) {
@@ -41,6 +64,10 @@ const STATS_QUERY = `
         nodes {
           stargazers {
             totalCount
+          }
+          primaryLanguage {
+            name
+            color
           }
         }
       }
@@ -86,11 +113,20 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
                     name: string | null;
                     login: string;
                     avatarUrl: string;
+                    bio?: string | null;
+                    company?: string | null;
+                    location?: string | null;
+                    websiteUrl?: string | null;
+                    twitterUsername?: string | null;
+                    createdAt?: string | null;
+                    status?: { emoji?: string | null; message?: string | null } | null;
                     followers: { totalCount: number };
+                    following: { totalCount: number };
                     repositories: {
                         totalCount: number;
                         nodes: Array<{
                             stargazers: { totalCount: number };
+                            primaryLanguage?: { name: string; color: string } | null;
                         }>;
                     };
                     contributionsCollection: {
@@ -127,16 +163,63 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
             0
         ) || 0;
 
+        const languages: Record<string, { count: number; color: string }> = {};
+        user.repositories?.nodes?.forEach((repo: { primaryLanguage?: { name: string; color: string } | null }) => {
+            if (repo.primaryLanguage) {
+                const lang = repo.primaryLanguage.name;
+                if (!languages[lang]) {
+                    languages[lang] = { count: 0, color: repo.primaryLanguage.color };
+                }
+                languages[lang].count++;
+            }
+        });
+
+        let topLanguage: { name: string; color: string } | null = null;
+        let maxCount = 0;
+        for (const [name, data] of Object.entries(languages)) {
+            if (data.count > maxCount) {
+                maxCount = data.count;
+                topLanguage = { name, color: data.color };
+            }
+        }
+
+        // Fetch all-time commit count via search API
+        let totalCommitsAllTime = 0;
+        try {
+            const searchRes = await fetch(`https://api.github.com/search/commits?q=author:${username}`, {
+                headers: {
+                    Authorization: `Bearer ${pat}`,
+                    Accept: 'application/vnd.github.cloak-preview+json',
+                },
+            });
+            if (searchRes.ok) {
+                const searchData = await searchRes.json() as { total_count?: number };
+                totalCommitsAllTime = searchData.total_count || 0;
+            }
+        } catch {
+            // Non-critical, fallback to 0
+        }
+
         return {
             login: user.login,
             avatarUrl: user.avatarUrl,
             name: user.name || user.login,
             followers: user.followers?.totalCount || 0,
+            following: user.following?.totalCount || 0,
             totalRepos: user.repositories?.totalCount || 0,
             totalStars,
             totalCommitsYear: (user.contributionsCollection?.totalCommitContributions || 0) + (user.contributionsCollection?.restrictedContributionsCount || 0),
+            totalCommitsAllTime,
             totalIssuesYear: user.contributionsCollection?.totalIssueContributions || 0,
             totalPRsYear: user.contributionsCollection?.totalPullRequestContributions || 0,
+            topLanguage,
+            bio: user.bio,
+            company: user.company,
+            location: user.location,
+            websiteUrl: user.websiteUrl,
+            twitterUsername: user.twitterUsername,
+            createdAt: user.createdAt,
+            status: user.status,
         };
     } catch (error: unknown) {
         if (error instanceof Error && (error.message === 'RATE_LIMIT' || error.message === 'BAD_CREDENTIALS')) throw error;
@@ -145,9 +228,9 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
     }
 }
 
-export async function fetchGitHubEvents(username: string, pat: string): Promise<GitHubEvent[]> {
+export async function fetchGitHubEvents(username: string, pat: string, page: number = 1): Promise<GitHubEvent[]> {
     try {
-        const res = await fetch(`https://api.github.com/users/${username}/events`, {
+        const res = await fetch(`https://api.github.com/users/${username}/events?page=${page}&per_page=30`, {
             headers: {
                 Authorization: `Bearer ${pat}`,
                 Accept: 'application/vnd.github.v3+json',
@@ -171,5 +254,84 @@ export async function fetchGitHubEvents(username: string, pat: string): Promise<
         if (error instanceof Error && (error.message === 'RATE_LIMIT' || error.message === 'BAD_CREDENTIALS')) throw error;
         console.error('Error fetching git events:', error);
         return [];
+    }
+}
+
+const CONNECTIONS_QUERY = `
+  query userConnections($login: String!) {
+    user(login: $login) {
+      followers(first: 100) {
+        nodes {
+          login
+          avatarUrl
+          name
+        }
+      }
+      following(first: 100) {
+        nodes {
+          login
+          avatarUrl
+          name
+        }
+      }
+    }
+  }
+`;
+
+export interface GitHubConnection {
+    login: string;
+    avatarUrl: string;
+    name: string | null;
+}
+
+export interface UserConnections {
+    followers: GitHubConnection[];
+    following: GitHubConnection[];
+}
+
+export async function fetchUserConnections(username: string, pat: string): Promise<UserConnections | null> {
+    try {
+        const res = await fetch(GITHUB_GRAPHQL_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${pat}`,
+            },
+            body: JSON.stringify({
+                query: CONNECTIONS_QUERY,
+                variables: { login: username },
+            }),
+        });
+
+        if (!res.ok) {
+            console.error(`GitHub API HTTP error fetching connections for ${username}:`, res.status);
+            return null;
+        }
+
+        const json = await res.json() as {
+            data?: {
+                user?: {
+                    followers?: { nodes: GitHubConnection[] };
+                    following?: { nodes: GitHubConnection[] };
+                } | null;
+            };
+            errors?: Array<unknown>;
+        };
+
+        if (json.errors) {
+            console.error(`GraphQL Errors fetching connections for ${username}:`, json.errors);
+            return null;
+        }
+
+        const user = json.data?.user;
+        if (!user) return null;
+
+        return {
+            followers: user.followers?.nodes || [],
+            following: user.following?.nodes || [],
+        };
+    } catch (error) {
+        console.error(`Exception fetching connections for ${username}:`, error);
+        return null;
     }
 }

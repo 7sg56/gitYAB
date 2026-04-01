@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchGitHubStats, GitHubUserStats } from '@/lib/github';
 import { useGitStore } from '@/store/useGitStore';
 import { getCache, setCache, getCacheKey, clearCache, STATS_TTL } from '@/lib/cache';
+import { getCachedData, cacheData } from '@/lib/auth';
 
 export function useGitHubStats(usernames: string[]) {
     const { pat, autoRescanEnabled, autoRescanIntervalMs, setLastScanTimestamp, setApiError } = useGitStore();
@@ -25,20 +26,37 @@ export function useGitHubStats(usernames: string[]) {
             const batch = currentUsers.slice(i, i + 3);
             await Promise.all(batch.map(async (username: string) => {
                 if (!forceRefresh) {
-                    const cached = getCache<GitHubUserStats>(getCacheKey('stats', username));
-                    if (cached) {
-                        results[username] = cached.data;
+                    // 1. Check localStorage first (fastest)
+                    const localCached = getCache<GitHubUserStats>(getCacheKey('stats', username));
+                    if (localCached) {
+                        results[username] = localCached.data;
                         return;
+                    }
+
+                    // 2. Check Supabase DB cache (persists across sessions/devices)
+                    try {
+                        const dbCached = await getCachedData<GitHubUserStats>('stats', username);
+                        if (dbCached) {
+                            results[username] = dbCached;
+                            // Backfill localStorage for faster subsequent reads
+                            setCache(getCacheKey('stats', username), dbCached, STATS_TTL);
+                            return;
+                        }
+                    } catch {
+                        // DB unreachable, continue to API
                     }
                 }
 
                 if (isBadCredentials) return;
 
+                // 3. Fetch from GitHub API
                 try {
                     const stats = await fetchGitHubStats(username, pat);
                     results[username] = stats;
                     if (stats) {
+                        // Write to both caches
                         setCache(getCacheKey('stats', username), stats, STATS_TTL);
+                        cacheData('stats', username, stats).catch(() => { });
                     }
                 } catch (error: unknown) {
                     if (error instanceof Error) {
