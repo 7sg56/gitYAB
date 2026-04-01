@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { LandingPage } from '@/components/LandingPage';
-import { ClerkAuthModal } from '@/components/ClerkAuthModal';
+import { SignInModal } from '@/components/SignInModal';
+import { SignUpModal } from '@/components/SignUpModal';
 import { SetupModal } from '@/components/SetupModal';
 import { UserMenu } from '@/components/UserMenu';
 import { Dashboard } from '@/components/Dashboard';
@@ -19,7 +20,8 @@ export default function Home() {
     const { currentView, apiError, setApiError, isLoading } = useGitStore();
     const [authView, setAuthView] = useState<AuthView>(null);
 
-    if (!auth.isLoaded || isLoading) {
+    // Wait only for Clerk to initialize
+    if (!auth.isLoaded) {
         return (
             <div className="flex items-center justify-center h-screen bg-background text-foreground">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -33,10 +35,14 @@ export default function Home() {
     // Unauthenticated flow: landing page or auth forms
     if (!auth.isSignedIn) {
         return (
-            authView === 'signin' || authView === 'signup' ? (
-                <ClerkAuthModal
-                    view={authView === 'signin' ? 'signin' : 'signup'}
-                    onViewChange={(view) => setAuthView(view)}
+            authView === 'signin' ? (
+                <SignInModal
+                    onSwitchToSignUp={() => setAuthView('signup')}
+                    onBack={() => setAuthView(null)}
+                />
+            ) : authView === 'signup' ? (
+                <SignUpModal
+                    onSwitchToSignIn={() => setAuthView('signin')}
                     onBack={() => setAuthView(null)}
                 />
             ) : (
@@ -45,6 +51,18 @@ export default function Home() {
                     onSignUp={() => setAuthView('signup')}
                 />
             )
+        );
+    }
+
+    // Authenticated but still loading DB data
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-screen bg-background text-foreground">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    Syncing your data...
+                </div>
+            </div>
         );
     }
 

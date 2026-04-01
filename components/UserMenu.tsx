@@ -1,20 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { UserButton } from '@clerk/nextjs';
-import { useAuthSync } from '@/store/useGitStore';
+import { UserButton, useAuth } from '@clerk/nextjs';
 import { LogOut, User as UserIcon, ChevronDown } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { cn } from '@/lib/utils';
 
 export function UserMenu() {
-    const auth = useAuthSync();
+    const { isSignedIn } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [isSigningOut, setIsSigningOut] = useState(false);
     const { user } = useUser();
 
     // Show Clerk UserButton if user is authenticated
-    if (auth.isSignedIn) {
+    if (isSignedIn) {
         return (
             <div className="relative">
                 <UserButton

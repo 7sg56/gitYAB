@@ -1,7 +1,7 @@
 import React from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
 import {
     completeSetup,
     getPat,
@@ -16,6 +16,7 @@ import {
     initSessionKey,
     clearSessionKey,
 } from '@/lib/auth';
+import { syncClerkUserToSupabase } from '@/lib/clerk-auth';
 
 type ViewType = 'home' | 'feed' | 'comparator' | 'target';
 
@@ -72,7 +73,7 @@ export const useGitStore = create<GitState>()(
             isAuthenticated: false,
             isAuthenticating: false,
             hasSetupCompleted: false,
-            isLoading: true,
+            isLoading: false,
             clerkUserId: null,
 
             pat: '',
@@ -98,6 +99,7 @@ export const useGitStore = create<GitState>()(
                     isAuthenticated: false,
                     clerkUserId: null,
                     hasSetupCompleted: false,
+                    isLoading: false,
                     pat: '',
                     mainUser: '',
                     rivals: [],
@@ -311,11 +313,13 @@ export const useGitStore = create<GitState>()(
 // Hook to sync Clerk auth state with Zustand store
 export function useAuthSync() {
     const { isLoaded, isSignedIn, userId } = useAuth();
-    const { clerkUserId, refreshAuthState, signOut: signOutAction } = useGitStore();
+    const { user: clerkUser } = useUser();
+    const clerkUserId = useGitStore((s) => s.clerkUserId);
 
     // Use refs to track previous values and avoid infinite loops
     const prevUserIdRef = React.useRef<string | null | undefined>(undefined);
     const prevSignedInRef = React.useRef<boolean | undefined>(undefined);
+    const hasSyncedRef = React.useRef(false);
 
     // Sync Clerk user ID to store when it changes
     React.useEffect(() => {
@@ -324,24 +328,30 @@ export function useAuthSync() {
         const userIdChanged = userId !== prevUserIdRef.current;
         const signedInChanged = isSignedIn !== prevSignedInRef.current;
 
-        // Only refresh if auth state actually changed
-        if ((userIdChanged || signedInChanged) && userId !== clerkUserId) {
-            // Update store with new user info
-            if (isSignedIn && userId) {
-                useGitStore.setState({
-                    clerkUserId: userId,
-                });
-                // Trigger database sync
-                refreshAuthState();
-            } else if (!isSignedIn && !userId) {
-                // User signed out
-                signOutAction();
-            }
-        }
-
         prevUserIdRef.current = userId;
         prevSignedInRef.current = isSignedIn;
-    }, [isLoaded, isSignedIn, userId, clerkUserId, refreshAuthState, signOutAction]);
+
+        // Only process if auth state actually changed
+        if (!userIdChanged && !signedInChanged && hasSyncedRef.current) return;
+        hasSyncedRef.current = true;
+
+        if (isSignedIn && userId && userId !== clerkUserId) {
+            // User signed in -- sync to store and trigger DB sync
+            useGitStore.setState({ clerkUserId: userId, isLoading: true });
+            syncClerkUserToSupabase(userId, clerkUser).then(() => {
+                useGitStore.getState().refreshAuthState();
+            });
+        } else if (!isSignedIn) {
+            // User is not signed in -- ensure loading is off
+            useGitStore.setState({
+                isAuthenticated: false,
+                clerkUserId: null,
+                hasSetupCompleted: false,
+                isLoading: false,
+                isAuthenticating: false,
+            });
+        }
+    }, [isLoaded, isSignedIn, userId, clerkUserId, clerkUser]);
 
     return { isLoaded, isSignedIn, userId };
 }
