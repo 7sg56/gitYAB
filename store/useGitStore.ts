@@ -1,6 +1,7 @@
+import React from 'react';
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { useClerkAuth } from '@/lib/clerk-auth';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { useAuth } from '@clerk/nextjs';
 import {
     completeSetup,
     getPat,
@@ -22,10 +23,9 @@ interface GitState {
     // Auth state
     isAuthenticated: boolean;
     isAuthenticating: boolean;
-    user: { email: string | null; id: string; clerkUserId: string } | null;
+    clerkUserId: string | null;
     hasSetupCompleted: boolean;
     isLoading: boolean;
-    clerkUserId: string | null;
 
     // Data state
     pat: string;
@@ -44,7 +44,6 @@ interface GitState {
     signOut: () => Promise<{ error: { message: string } | null }>;
     completeSetup: (pat: string) => Promise<{ error: { message: string } | null }>;
     refreshAuthState: () => Promise<void>;
-    setClerkUserId: (userId: string | null) => void;
 
     // Data actions
     setPat: (pat: string) => void;
@@ -72,7 +71,6 @@ export const useGitStore = create<GitState>()(
             // Initial state
             isAuthenticated: false,
             isAuthenticating: false,
-            user: null,
             hasSetupCompleted: false,
             isLoading: true,
             clerkUserId: null,
@@ -98,7 +96,6 @@ export const useGitStore = create<GitState>()(
                 clearSessionKey();
                 set({
                     isAuthenticated: false,
-                    user: null,
                     clerkUserId: null,
                     hasSetupCompleted: false,
                     pat: '',
@@ -134,14 +131,14 @@ export const useGitStore = create<GitState>()(
                 set({ isLoading: true });
                 try {
                     // Auth state is now managed by Clerk hooks
-                    // This function is called from components that use useClerkAuth
+                    // This function is called from components that use useAuth
                     // So we just need to sync data from database
                     const clerkUserId = get().clerkUserId;
 
                     if (!clerkUserId) {
                         set({
                             isAuthenticated: false,
-                            user: null,
+                            clerkUserId: null,
                             hasSetupCompleted: false,
                             isLoading: false,
                         });
@@ -165,21 +162,6 @@ export const useGitStore = create<GitState>()(
                 } finally {
                     set({ isLoading: false, isAuthenticating: false });
                     isRefreshing = false;
-                }
-            },
-
-            setClerkUserId: (userId: string | null) => {
-                set({ clerkUserId: userId });
-                if (userId) {
-                    set({
-                        user: {
-                            email: null, // Will be populated by useClerkAuth
-                            id: userId,
-                            clerkUserId: userId,
-                        },
-                    });
-                } else {
-                    set({ user: null, isAuthenticated: false });
                 }
             },
 
@@ -317,6 +299,7 @@ export const useGitStore = create<GitState>()(
         }),
         {
             name: 'gityab-storage',
+            storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
                 currentView: state.currentView,
                 lastScanTimestamp: state.lastScanTimestamp,
@@ -327,19 +310,38 @@ export const useGitStore = create<GitState>()(
 
 // Hook to sync Clerk auth state with Zustand store
 export function useAuthSync() {
-    const auth = useClerkAuth();
-    const setClerkUserId = useGitStore((state) => state.setClerkUserId);
-    const refreshAuthState = useGitStore((state) => state.refreshAuthState);
+    const { isLoaded, isSignedIn, userId } = useAuth();
+    const { clerkUserId, refreshAuthState, signOut: signOutAction } = useGitStore();
 
-    // Sync Clerk user ID to store
-    const prevUserId = useGitStore((state) => state.clerkUserId);
+    // Use refs to track previous values and avoid infinite loops
+    const prevUserIdRef = React.useRef<string | null | undefined>(undefined);
+    const prevSignedInRef = React.useRef<boolean | undefined>(undefined);
 
-    if (auth.userId !== prevUserId) {
-        setClerkUserId(auth.userId ?? null);
-        if (auth.userId && auth.isSignedIn) {
-            refreshAuthState();
+    // Sync Clerk user ID to store when it changes
+    React.useEffect(() => {
+        if (!isLoaded) return;
+
+        const userIdChanged = userId !== prevUserIdRef.current;
+        const signedInChanged = isSignedIn !== prevSignedInRef.current;
+
+        // Only refresh if auth state actually changed
+        if ((userIdChanged || signedInChanged) && userId !== clerkUserId) {
+            // Update store with new user info
+            if (isSignedIn && userId) {
+                useGitStore.setState({
+                    clerkUserId: userId,
+                });
+                // Trigger database sync
+                refreshAuthState();
+            } else if (!isSignedIn && !userId) {
+                // User signed out
+                signOutAction();
+            }
         }
-    }
 
-    return auth;
+        prevUserIdRef.current = userId;
+        prevSignedInRef.current = isSignedIn;
+    }, [isLoaded, isSignedIn, userId, clerkUserId, refreshAuthState, signOutAction]);
+
+    return { isLoaded, isSignedIn, userId };
 }
