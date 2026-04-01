@@ -67,7 +67,7 @@ export function useClerkAuth() {
                         .select()
                         .maybeSingle();
 
-                    if (newUser) {
+                    if (newUser && !insertError) {
                         // Create default user settings
                         await supabase.from('user_settings').insert({
                             user_id: newUser.id,

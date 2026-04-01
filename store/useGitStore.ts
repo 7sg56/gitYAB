@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useClerkAuth } from '@/lib/clerk-auth';
 import {
-    signInWithGithub,
-    signOut,
     completeSetup,
     getPat,
     getGithubUsername,
@@ -16,7 +15,6 @@ import {
     initSessionKey,
     clearSessionKey,
 } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
 
 type ViewType = 'home' | 'feed' | 'comparator' | 'target';
 
@@ -24,9 +22,10 @@ interface GitState {
     // Auth state
     isAuthenticated: boolean;
     isAuthenticating: boolean;
-    user: { email: string; id: string } | null;
+    user: { email: string | null; id: string; clerkUserId: string } | null;
     hasSetupCompleted: boolean;
     isLoading: boolean;
+    clerkUserId: string | null;
 
     // Data state
     pat: string;
@@ -45,6 +44,7 @@ interface GitState {
     signOut: () => Promise<{ error: { message: string } | null }>;
     completeSetup: (pat: string) => Promise<{ error: { message: string } | null }>;
     refreshAuthState: () => Promise<void>;
+    setClerkUserId: (userId: string | null) => void;
 
     // Data actions
     setPat: (pat: string) => void;
@@ -75,6 +75,7 @@ export const useGitStore = create<GitState>()(
             user: null,
             hasSetupCompleted: false,
             isLoading: true,
+            clerkUserId: null,
 
             pat: '',
             mainUser: '',
@@ -89,25 +90,16 @@ export const useGitStore = create<GitState>()(
 
             // Auth actions
             signInWithGithub: async () => {
-                set({ isAuthenticating: true, apiError: null });
-                const result = await signInWithGithub();
-
-                if (result.error) {
-                    set({ isAuthenticating: false, apiError: result.error.message });
-                    return { error: result.error };
-                }
-
-                // Redirect happens automatically
+                // Clerk handles sign-in
                 return { error: null };
             },
 
             signOut: async () => {
-                set({ isAuthenticating: true });
-                const { error } = await signOut();
                 clearSessionKey();
                 set({
                     isAuthenticated: false,
                     user: null,
+                    clerkUserId: null,
                     hasSetupCompleted: false,
                     pat: '',
                     mainUser: '',
@@ -115,12 +107,17 @@ export const useGitStore = create<GitState>()(
                     enabledRivals: {},
                     isAuthenticating: false,
                 });
-                return { error };
+                return { error: null };
             },
 
             completeSetup: async (pat: string) => {
+                const clerkUserId = get().clerkUserId;
+                if (!clerkUserId) {
+                    return { error: { message: 'User not authenticated' } };
+                }
+
                 set({ apiError: null });
-                const result = await completeSetup(pat);
+                const result = await completeSetup(clerkUserId, pat);
 
                 if (result.error) {
                     set({ apiError: result.error.message });
@@ -136,10 +133,12 @@ export const useGitStore = create<GitState>()(
                 isRefreshing = true;
                 set({ isLoading: true });
                 try {
-                    // Check auth status
-                    const { data: { user }, error: authError } = await supabase.auth.getUser();
+                    // Auth state is now managed by Clerk hooks
+                    // This function is called from components that use useClerkAuth
+                    // So we just need to sync data from database
+                    const clerkUserId = get().clerkUserId;
 
-                    if (authError || !user) {
+                    if (!clerkUserId) {
                         set({
                             isAuthenticated: false,
                             user: null,
@@ -149,16 +148,13 @@ export const useGitStore = create<GitState>()(
                         return;
                     }
 
-                    set({
-                        isAuthenticated: true,
-                        user: { email: user.email || '', id: user.id },
-                    });
+                    set({ isAuthenticated: true });
 
                     // Initialize session key
                     initSessionKey();
 
                     // Check if setup is complete
-                    const setupComplete = await hasCompletedSetup();
+                    const setupComplete = await hasCompletedSetup(clerkUserId);
                     set({ hasSetupCompleted: setupComplete });
 
                     if (setupComplete) {
@@ -172,21 +168,43 @@ export const useGitStore = create<GitState>()(
                 }
             },
 
+            setClerkUserId: (userId: string | null) => {
+                set({ clerkUserId: userId });
+                if (userId) {
+                    set({
+                        user: {
+                            email: null, // Will be populated by useClerkAuth
+                            id: userId,
+                            clerkUserId: userId,
+                        },
+                    });
+                } else {
+                    set({ user: null, isAuthenticated: false });
+                }
+            },
+
             // Data actions
             setPat: (pat) => set({ pat }),
             setMainUser: (mainUser) => set({ mainUser }),
+
             addRival: async (user: string) => {
-                const { error } = await addRivalDb(user);
+                const clerkUserId = get().clerkUserId;
+                if (!clerkUserId) return;
+
+                const { error } = await addRivalDb(clerkUserId, user);
                 if (!error) {
                     await get().syncFromDatabase();
                 }
             },
 
             removeRival: async (user: string) => {
-                const rivals = await getRivals();
+                const clerkUserId = get().clerkUserId;
+                if (!clerkUserId) return;
+
+                const rivals = await getRivals(clerkUserId);
                 const rival = rivals.find((r) => r.rival_username === user.toLowerCase());
                 if (rival) {
-                    const { error } = await removeRivalDb(rival.id);
+                    const { error } = await removeRivalDb(clerkUserId, rival.id);
                     if (!error) {
                         await get().syncFromDatabase();
                     }
@@ -194,10 +212,13 @@ export const useGitStore = create<GitState>()(
             },
 
             toggleRival: async (user: string) => {
-                const rivals = await getRivals();
+                const clerkUserId = get().clerkUserId;
+                if (!clerkUserId) return;
+
+                const rivals = await getRivals(clerkUserId);
                 const rival = rivals.find((r) => r.rival_username === user.toLowerCase());
                 if (rival) {
-                    const { error } = await toggleRivalDb(rival.id, !rival.enabled);
+                    const { error } = await toggleRivalDb(clerkUserId, rival.id, !rival.enabled);
                     if (!error) {
                         await get().syncFromDatabase();
                     }
@@ -205,23 +226,34 @@ export const useGitStore = create<GitState>()(
             },
 
             setCurrentView: (view) => set({ currentView: view }),
+
             setAutoRescanEnabled: async (enabled) => {
-                const { error } = await updateUserSettings({ auto_rescan_enabled: enabled });
+                const clerkUserId = get().clerkUserId;
+                if (!clerkUserId) return;
+
+                const { error } = await updateUserSettings(clerkUserId, { auto_rescan_enabled: enabled });
                 if (!error) {
                     set({ autoRescanEnabled: enabled });
                 }
             },
 
             setAutoRescanIntervalMs: async (ms) => {
-                const { error } = await updateUserSettings({ auto_rescan_interval_ms: ms });
+                const clerkUserId = get().clerkUserId;
+                if (!clerkUserId) return;
+
+                const { error } = await updateUserSettings(clerkUserId, { auto_rescan_interval_ms: ms });
                 if (!error) {
                     set({ autoRescanIntervalMs: ms });
                 }
             },
 
             setLastScanTimestamp: (ts) => set({ lastScanTimestamp: ts }),
+
             setRightPanelOpen: async (open) => {
-                const { error } = await updateUserSettings({ right_panel_open: open });
+                const clerkUserId = get().clerkUserId;
+                if (!clerkUserId) return;
+
+                const { error } = await updateUserSettings(clerkUserId, { right_panel_open: open });
                 if (!error) {
                     set({ rightPanelOpen: open });
                 }
@@ -245,16 +277,19 @@ export const useGitStore = create<GitState>()(
 
             syncFromDatabase: async () => {
                 try {
+                    const clerkUserId = get().clerkUserId;
+                    if (!clerkUserId) return;
+
                     // Get PAT
-                    const pat = await getPat();
+                    const pat = await getPat(clerkUserId);
                     set({ pat: pat || '' });
 
                     // Get GitHub username
-                    const mainUser = await getGithubUsername();
+                    const mainUser = await getGithubUsername(clerkUserId);
                     set({ mainUser: mainUser || '' });
 
                     // Get user settings
-                    const settings = await getUserSettings();
+                    const settings = await getUserSettings(clerkUserId);
                     if (settings) {
                         set({
                             autoRescanEnabled: settings.auto_rescan_enabled,
@@ -267,7 +302,7 @@ export const useGitStore = create<GitState>()(
                     }
 
                     // Get rivals
-                    const rivals = await getRivals();
+                    const rivals = await getRivals(clerkUserId);
                     set({
                         rivals: rivals.map((r) => r.rival_username),
                         enabledRivals: rivals.reduce((acc, r) => {
@@ -290,23 +325,21 @@ export const useGitStore = create<GitState>()(
     )
 );
 
-// Initialize auth state change listener
-if (typeof window !== 'undefined') {
-    supabase.auth.onAuthStateChange(async (event) => {
-        const store = useGitStore.getState();
-        if (event === 'SIGNED_IN') {
-            await store.refreshAuthState();
-        } else if (event === 'SIGNED_OUT') {
-            clearSessionKey();
-            useGitStore.setState({
-                isAuthenticated: false,
-                user: null,
-                hasSetupCompleted: false,
-                pat: '',
-                mainUser: '',
-                rivals: [],
-                enabledRivals: {},
-            });
+// Hook to sync Clerk auth state with Zustand store
+export function useAuthSync() {
+    const auth = useClerkAuth();
+    const setClerkUserId = useGitStore((state) => state.setClerkUserId);
+    const refreshAuthState = useGitStore((state) => state.refreshAuthState);
+
+    // Sync Clerk user ID to store
+    const prevUserId = useGitStore((state) => state.clerkUserId);
+
+    if (auth.userId !== prevUserId) {
+        setClerkUserId(auth.userId ?? null);
+        if (auth.userId && auth.isSignedIn) {
+            refreshAuthState();
         }
-    });
+    }
+
+    return auth;
 }

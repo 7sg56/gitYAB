@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { Github, KeyRound, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useGitStore } from '@/store/useGitStore';
+import { useAuthSync } from '@/store/useGitStore';
 
 export function SetupModal() {
+    const auth = useAuthSync();
     const { pat, completeSetup, apiError, setApiError, hasSetupCompleted } = useGitStore();
     const [initialized, setInitialized] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,7 +45,7 @@ export function SetupModal() {
         }
     };
 
-    if (!isVisible) return null;
+    if (!isVisible || !auth.isLoaded) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">

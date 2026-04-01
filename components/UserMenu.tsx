@@ -1,23 +1,45 @@
 'use client';
 
 import { useState } from 'react';
-import { LogOut, User as UserIcon, ChevronDown } from 'lucide-react';
+import { UserButton } from '@clerk/nextjs';
 import { useGitStore } from '@/store/useGitStore';
+import { useAuthSync } from '@/store/useGitStore';
+import { LogOut, User as UserIcon, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function UserMenu() {
-    const { user, signOut } = useGitStore();
+    const auth = useAuthSync();
+    const { user } = useGitStore();
     const [isOpen, setIsOpen] = useState(false);
     const [isSigningOut, setIsSigningOut] = useState(false);
 
+    // Show Clerk UserButton if user is authenticated
+    if (auth.isSignedIn) {
+        return (
+            <div className="relative">
+                <UserButton
+                    appearance={{
+                        elements: {
+                            rootBox: 'relative',
+                            avatarBox: 'w-8 h-8 rounded-md overflow-hidden',
+                            trigger: 'flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-accent transition-colors cursor-pointer',
+                        },
+                    }}
+                />
+            </div>
+        );
+    }
+
+    // Fallback: custom menu for non-Clerk auth (shouldn't happen with Clerk integration)
+    if (!user) return null;
+
     const handleSignOut = async () => {
         setIsSigningOut(true);
+        const { signOut } = useGitStore.getState();
         await signOut();
         setIsOpen(false);
         setIsSigningOut(false);
     };
-
-    if (!user) return null;
 
     return (
         <div className="relative">
