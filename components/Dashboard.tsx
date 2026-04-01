@@ -6,7 +6,6 @@ import { useGitHubEvents } from '@/hooks/useGitHubEvents';
 import { formatTimeAgo } from '@/lib/utils';
 import { useMemo } from 'react';
 import { GitCommit, GitPullRequest, CircleDot, Star, BookMarked, Users, RefreshCw, Activity, CheckCircle2, GitBranch } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export function Dashboard() {
     const { mainUser, rivals, enabledRivals } = useGitStore();
@@ -36,34 +35,6 @@ export function Dashboard() {
 
     const mainStats = data[mainUser];
 
-    const chartData = allUsers.map((user) => {
-        const d = data[user];
-        return {
-            name: user,
-            Commits: d?.totalCommitsYear || 0,
-            PRs: d?.totalPRsYear || 0,
-            Issues: d?.totalIssuesYear || 0,
-        };
-    });
-
-    const popularityData = allUsers.map((user) => {
-        const d = data[user];
-        return {
-            name: user,
-            Stars: d?.totalStars || 0,
-            Followers: d?.followers || 0,
-            Repos: d?.totalRepos || 0,
-        };
-    });
-
-    const tooltipStyle = {
-        backgroundColor: '#161b22',
-        border: '1px solid #30363d',
-        borderRadius: '8px',
-        fontSize: '12px',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.5)',
-    };
-
     // Find latest meaningful events
     const latestPush = events.find(e => e.type === 'PushEvent');
     const latestPushPayload = latestPush?.payload as Record<string, unknown>;
@@ -81,7 +52,7 @@ export function Dashboard() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground tracking-tight">Overview</h1>
+                    <h1 className="text-2xl font-bold text-foreground tracking-tight">Insights</h1>
                     <p className="text-sm text-muted-foreground mt-1">
                         @{mainUser} vs {activeRivals.length} rival{activeRivals.length === 1 ? '' : 's'}
                     </p>
@@ -259,61 +230,6 @@ export function Dashboard() {
                     </div>
                 )}
 
-
-                {/* --- CHARTS SECTION --- */}
-                {activeRivals.length > 0 ? (
-                    <>
-                        {/* Contributions Chart */}
-                        <div className="md:col-span-12 lg:col-span-6 bg-card/40 border border-border/60 rounded-xl p-6 flex flex-col min-h-[380px]">
-                            <h3 className="text-sm font-medium text-foreground mb-6 flex items-center gap-2">
-                                <Activity size={16} className="text-muted-foreground" />
-                                Contributions
-                            </h3>
-                            <div className="flex-1 w-full min-h-[300px]">
-                                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
-                                        <XAxis dataKey="name" stroke="#8b949e" fontSize={11} tickLine={false} axisLine={false} tickMargin={12} angle={-35} textAnchor="end" height={60} tickFormatter={(val) => val.length > 12 ? `${val.substring(0, 10)}...` : val} />
-                                        <YAxis stroke="#8b949e" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val} />
-                                        <Tooltip contentStyle={{ ...tooltipStyle, backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                                        <Bar dataKey="Commits" fill="#58a6ff" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                                        <Bar dataKey="PRs" fill="#bc8cff" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                                        <Bar dataKey="Issues" fill="#3fb950" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-
-                        {/* Popularity & Reach Chart */}
-                        <div className="md:col-span-12 lg:col-span-6 bg-card/40 border border-border/60 rounded-xl p-6 min-h-[380px] flex flex-col">
-                            <h3 className="text-sm font-medium text-foreground mb-6 flex items-center gap-2">
-                                <Star size={16} className="text-muted-foreground" />
-                                Reach
-                            </h3>
-                            <div className="flex-1 w-full min-h-[300px]">
-                                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                                    <BarChart data={popularityData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
-                                        <XAxis dataKey="name" stroke="#8b949e" fontSize={11} tickLine={false} axisLine={false} tickMargin={12} angle={-35} textAnchor="end" height={60} tickFormatter={(val) => val.length > 12 ? `${val.substring(0, 10)}...` : val} />
-                                        <YAxis stroke="#8b949e" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val} />
-                                        <Tooltip contentStyle={{ ...tooltipStyle, backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                                        <Bar dataKey="Stars" fill="#d29922" radius={[4, 4, 0, 0]} maxBarSize={48} />
-                                        <Bar dataKey="Followers" fill="#bc8cff" radius={[4, 4, 0, 0]} maxBarSize={48} />
-                                        <Bar dataKey="Repos" fill="#3fb950" radius={[4, 4, 0, 0]} maxBarSize={48} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <div className="md:col-span-12 border border-border/60 bg-card/40 rounded-xl p-16 text-center flex flex-col items-center justify-center min-h-[400px]">
-                        <div className="p-4 bg-background border border-border/60 rounded-full mb-4">
-                            <Users size={24} className="text-muted-foreground" />
-                        </div>
-                        <h3 className="text-sm font-medium text-foreground mb-1">No Rivals Selected</h3>
-                        <p className="text-sm text-muted-foreground max-w-sm">
-                            Add some rivals from the panel on the right to compare your stats and see dynamic charts.
-                        </p>
-                    </div>
-                )}
             </div>
         </div>
     );

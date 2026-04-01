@@ -2,8 +2,9 @@
 
 import { useGitStore } from '@/store/useGitStore';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
-import { Github, LayoutDashboard, Activity, Swords, Crosshair, Timer } from 'lucide-react';
+import { Github, LayoutDashboard, Activity, Swords, Crosshair, Timer, LogOut, ChevronUp, BarChart2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useClerk } from '@clerk/nextjs';
 import { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 
@@ -21,9 +22,12 @@ export function Sidebar() {
     const users = useMemo(() => (mainUser ? [mainUser] : []), [mainUser]);
     const { data } = useGitHubStats(users);
     const mainStats = data[mainUser];
+    const { signOut } = useClerk();
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
 
     const navItems = [
-        { id: 'home' as const, label: 'Overview', icon: LayoutDashboard },
+        { id: 'home' as const, label: 'Insights', icon: LayoutDashboard },
+        { id: 'graphs' as const, label: 'Analytics', icon: BarChart2 },
         { id: 'feed' as const, label: 'Activity', icon: Activity },
         { id: 'comparator' as const, label: 'Compare', icon: Swords },
         { id: 'target' as const, label: 'Target', icon: Crosshair },
@@ -106,8 +110,14 @@ export function Sidebar() {
 
             {/* User info */}
             {mainUser && (
-                <div className="border-t border-border p-3">
-                    <div className="flex items-center gap-2.5 px-3 py-2">
+                <div className="border-t border-border p-3 relative">
+                    <button
+                        onClick={() => setUserMenuOpen(!userMenuOpen)}
+                        className={cn(
+                            "w-full flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors hover:bg-accent/50",
+                            userMenuOpen && "bg-accent/50"
+                        )}
+                    >
                         {mainStats?.avatarUrl ? (
                             <Image
                                 src={mainStats.avatarUrl}
@@ -122,11 +132,30 @@ export function Sidebar() {
                                 {mainUser.charAt(0).toUpperCase()}
                             </div>
                         )}
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 text-left">
                             <span className="text-sm text-foreground truncate block">{mainStats?.name || mainUser}</span>
                             <span className="text-[11px] text-muted-foreground truncate block">@{mainUser}</span>
                         </div>
-                    </div>
+                        <ChevronUp size={14} className={cn("text-muted-foreground transition-transform", userMenuOpen && "rotate-180")} />
+                    </button>
+
+                    {userMenuOpen && (
+                        <>
+                            <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
+                            <div className="absolute bottom-full left-3 right-3 mb-2 bg-card border border-border rounded-md shadow-lg z-20 overflow-hidden">
+                                <button
+                                    onClick={() => {
+                                        setUserMenuOpen(false);
+                                        void signOut();
+                                    }}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-danger hover:bg-danger/10 transition-colors"
+                                >
+                                    <LogOut size={14} />
+                                    Log out
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
         </div>

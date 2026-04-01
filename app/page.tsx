@@ -6,11 +6,12 @@ import { LandingPage } from '@/components/LandingPage';
 import { SignInModal } from '@/components/SignInModal';
 import { SignUpModal } from '@/components/SignUpModal';
 import { SetupModal } from '@/components/SetupModal';
-import { UserMenu } from '@/components/UserMenu';
 import { Dashboard } from '@/components/Dashboard';
 import { Feed } from '@/components/Feed';
 import { Comparator } from '@/components/Comparator';
 import { TargetRival } from '@/components/TargetRival';
+import { RivalsPanel } from '@/components/RivalsPanel';
+import { Graphs } from '@/components/Graphs';
 import { useGitStore, useAuthSync } from '@/store/useGitStore';
 
 type AuthView = null | 'signin' | 'signup';
@@ -80,13 +81,12 @@ export default function Home() {
                 <Sidebar />
                 <main className="flex-1 overflow-y-auto custom-scrollbar">
                     {currentView === 'home' && <Dashboard />}
+                    {currentView === 'graphs' && <Graphs />}
                     {currentView === 'feed' && <Feed />}
                     {currentView === 'comparator' && <Comparator />}
                     {currentView === 'target' && <TargetRival />}
                 </main>
-            </div>
-            <div className="absolute top-3 right-3 z-40">
-                <UserMenu />
+                <RivalsPanel />
             </div>
         </div>
     );

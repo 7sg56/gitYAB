@@ -3,17 +3,43 @@
 import { useGitStore } from '@/store/useGitStore';
 import { useGitHubEvents } from '@/hooks/useGitHubEvents';
 import { formatTimeAgo } from '@/lib/utils';
-import { GitCommit, GitPullRequest, CircleDot, GitBranch, Star, Activity, RefreshCw, GitFork, MessageSquare } from 'lucide-react';
+import { GitCommit, GitPullRequest, CircleDot, GitBranch, Star, Activity, RefreshCw, GitFork, MessageSquare, Loader2 } from 'lucide-react';
 import { GitHubEvent } from '@/lib/github';
 import Image from 'next/image';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 export function Feed() {
-    const { rivals, enabledRivals } = useGitStore();
+    const { mainUser, rivals, enabledRivals } = useGitStore();
     const activeRivals = useMemo(() => rivals.filter((r) => enabledRivals[r] !== false), [rivals, enabledRivals]);
-    const { events, loading, rescan } = useGitHubEvents(activeRivals);
+    const allUsers = useMemo(() => [mainUser, ...activeRivals].filter(Boolean) as string[], [mainUser, activeRivals]);
+    const { events, loading, isLoadingMore, hasMore, loadMore, rescan } = useGitHubEvents(allUsers);
+    const [visibleCount, setVisibleCount] = useState(30);
 
-    if (activeRivals.length === 0) {
+    const handleLoadMore = () => {
+        if (visibleCount < events.length) {
+            setVisibleCount((prev) => prev + 30);
+        } else if (hasMore) {
+            loadMore();
+            setVisibleCount((prev) => prev + 30);
+        }
+    };
+
+    const latestActions = useMemo(() => {
+        if (!events || events.length === 0) return null;
+
+        const latest = new Map<string, { avatar: string, event: GitHubEvent }>();
+
+        for (const ev of events) {
+            const login = ev.actor.login;
+            if (!latest.has(login)) {
+                latest.set(login, { avatar: ev.actor.avatar_url, event: ev });
+            }
+        }
+
+        return Array.from(latest.values()).sort((a, b) => new Date(b.event.created_at).getTime() - new Date(a.event.created_at).getTime());
+    }, [events]);
+
+    if (allUsers.length === 0) {
         return (
             <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground space-y-3">
                 <Activity size={32} className="opacity-30" />
@@ -50,10 +76,60 @@ export function Feed() {
                     <p className="text-sm text-muted-foreground">No recent activity found.</p>
                 </div>
             ) : (
-                <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
-                    {events.map((event) => (
-                        <EventItem key={event.id} event={event} />
-                    ))}
+                <div className="space-y-6">
+                    {/* Activity Stats Overview */}
+                    {latestActions && latestActions.length > 0 && (
+                        <div className="bg-card border border-border/60 rounded-xl p-4 md:p-5 flex flex-col">
+                            <h3 className="text-sm font-medium text-foreground mb-4 flex items-center gap-2">
+                                <Activity size={16} className="text-muted-foreground" />
+                                Latest Actions
+                                <span className="ml-auto text-xs text-muted-foreground font-normal">Most recent events</span>
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                {latestActions.slice(0, 6).map(({ event, avatar }) => {
+                                    const info = getEventDetail(event);
+                                    return (
+                                        <div key={event.actor.login} className="flex items-center gap-3 p-3 rounded-lg border border-border/40 bg-background/50">
+                                            <Image src={avatar} alt={event.actor.login} width={28} height={28} className="rounded-full w-7 h-7 object-cover bg-accent shrink-0 border border-border/50" unoptimized />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-foreground truncate">{event.actor.login}</p>
+                                                <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5 truncate">
+                                                    <span className={info.color}>{info.icon}</span>
+                                                    {formatTimeAgo(event.created_at)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
+                        {events.slice(0, visibleCount).map((event) => (
+                            <EventItem key={event.id} event={event} />
+                        ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {(visibleCount < events.length || hasMore) && (
+                        <div className="flex justify-center pt-2">
+                            <button
+                                onClick={handleLoadMore}
+                                disabled={isLoadingMore && visibleCount >= events.length}
+                                className="px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isLoadingMore && visibleCount >= events.length ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        Fetching from GitHub...
+                                    </>
+                                ) : (
+                                    'Load more activity'
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -69,9 +145,9 @@ function EventItem({ event }: { event: GitHubEvent }) {
             <Image
                 src={event.actor.avatar_url}
                 alt={event.actor.login}
-                width={32}
-                height={32}
-                className="rounded-full mt-0.5 shrink-0"
+                width={40}
+                height={40}
+                className="rounded-full mt-0.5 shrink-0 object-cover w-10 h-10 border border-border/50 self-start"
                 unoptimized
             />
 

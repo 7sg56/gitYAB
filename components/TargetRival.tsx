@@ -15,6 +15,18 @@ interface RivalRanking {
     status: 'defeated' | 'target' | 'above';
 }
 
+function calculateScore(stats: import('@/lib/github').GitHubUserStats) {
+    // Commits < Followers < PRs < Stars
+    return (
+        (stats.totalCommitsYear || 0) * 1 +
+        (stats.totalRepos || 0) * 2 +
+        (stats.followers || 0) * 5 +
+        (stats.totalIssuesYear || 0) * 10 +
+        (stats.totalPRsYear || 0) * 20 +
+        (stats.totalStars || 0) * 50
+    );
+}
+
 export function TargetRival() {
     const { mainUser, rivals, enabledRivals } = useGitStore();
     const activeRivals = useMemo(() => rivals.filter((r) => enabledRivals[r] !== false), [rivals, enabledRivals]);
@@ -24,13 +36,13 @@ export function TargetRival() {
     const leaderboard = useMemo(() => {
         if (!data[mainUser]) return null;
         const mainStat = data[mainUser]!;
-        const mainScore = mainStat.totalCommitsYear + mainStat.totalPRsYear;
+        const mainScore = calculateScore(mainStat);
 
         const rivalScores: RivalRanking[] = activeRivals
             .filter((r) => data[r])
             .map((r) => {
                 const s = data[r]!;
-                const score = s.totalCommitsYear + s.totalPRsYear;
+                const score = calculateScore(s);
                 return {
                     login: s.login,
                     name: s.name || s.login,
@@ -87,7 +99,7 @@ export function TargetRival() {
             <div>
                 <h1 className="text-xl font-semibold text-foreground">Leaderboard</h1>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                    You are ranked #{leaderboard.userPosition} of {leaderboard.totalPlayers}. Score = commits + PRs (past year).
+                    You are ranked #{leaderboard.userPosition} of {leaderboard.totalPlayers}. Score is weighted (Commits &lt; Followers &lt; PRs &lt; Stars).
                 </p>
             </div>
 
@@ -111,7 +123,7 @@ export function TargetRival() {
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                             Their score: {leaderboard.target.score.toLocaleString()} --
-                            Gap: <span className="text-danger font-medium">{leaderboard.gap.toLocaleString()}</span> commits + PRs to overtake
+                            Gap: <span className="text-danger font-medium">{leaderboard.gap.toLocaleString()}</span> points to overtake
                         </p>
                     </div>
                     <ArrowUp size={16} className="text-danger shrink-0" />

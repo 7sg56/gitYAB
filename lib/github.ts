@@ -145,9 +145,9 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
     }
 }
 
-export async function fetchGitHubEvents(username: string, pat: string): Promise<GitHubEvent[]> {
+export async function fetchGitHubEvents(username: string, pat: string, page: number = 1): Promise<GitHubEvent[]> {
     try {
-        const res = await fetch(`https://api.github.com/users/${username}/events`, {
+        const res = await fetch(`https://api.github.com/users/${username}/events?page=${page}&per_page=30`, {
             headers: {
                 Authorization: `Bearer ${pat}`,
                 Accept: 'application/vnd.github.v3+json',

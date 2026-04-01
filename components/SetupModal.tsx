@@ -49,6 +49,25 @@ export function SetupModal() {
 
         if (inputPat.trim() && inputUsername.trim()) {
             setIsSubmitting(true);
+
+            // Validate PAT
+            try {
+                const res = await fetch('https://api.github.com/user', {
+                    headers: {
+                        Authorization: `token ${inputPat.trim()}`,
+                    }
+                });
+                if (!res.ok) {
+                    setApiError('Invalid GitHub Personal Access Token. Please check your credentials.');
+                    setIsSubmitting(false);
+                    return;
+                }
+            } catch {
+                setApiError('Error validating PAT. Please try again.');
+                setIsSubmitting(false);
+                return;
+            }
+
             // Save username first
             const clerkUserId = useGitStore.getState().clerkUserId;
             if (clerkUserId) {
