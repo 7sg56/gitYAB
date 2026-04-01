@@ -14,7 +14,6 @@ import {
     removeRival as removeRivalDb,
     toggleRival as toggleRivalDb,
     initSessionKey,
-    clearSessionKey,
 } from '@/lib/auth';
 import { syncClerkUserToSupabase } from '@/lib/clerk-auth';
 
@@ -94,7 +93,8 @@ export const useGitStore = create<GitState>()(
             },
 
             signOut: async () => {
-                clearSessionKey();
+                // We DON'T clear the session key on sign out anymore so that it persists 
+                // for the next time the same user logs into this browser.
                 set({
                     isAuthenticated: false,
                     clerkUserId: null,
@@ -150,7 +150,7 @@ export const useGitStore = create<GitState>()(
                     set({ isAuthenticated: true });
 
                     // Initialize session key
-                    initSessionKey();
+                    initSessionKey(clerkUserId);
 
                     // Check if setup is complete
                     const setupComplete = await hasCompletedSetup(clerkUserId);

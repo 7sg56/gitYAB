@@ -8,17 +8,29 @@ import { getCurrentUserId, getCurrentUserRecord } from './clerk-auth';
  */
 
 /**
- * Initialize or retrieve the session key from sessionStorage
+ * Initialize or retrieve the session key from localStorage, tied to a specific user
  */
-export function initSessionKey(): string {
+export function initSessionKey(clerkUserId: string): string {
     if (typeof window === 'undefined') {
         throw new Error('Session key must be initialized in browser');
     }
 
-    let key = sessionStorage.getItem('gityab_session_key');
+    const storageKey = `gityab_session_key_${clerkUserId}`;
+    let key = localStorage.getItem(storageKey);
+
+    // Fallback/Migration: check if there's an old non-user-specific key
+    if (!key) {
+        const oldKey = localStorage.getItem('gityab_session_key');
+        if (oldKey) {
+            key = oldKey;
+            localStorage.setItem(storageKey, key);
+            localStorage.removeItem('gityab_session_key');
+        }
+    }
+
     if (!key) {
         key = generateSessionKey();
-        sessionStorage.setItem('gityab_session_key', key);
+        localStorage.setItem(storageKey, key);
     }
     return key;
 }
@@ -26,25 +38,25 @@ export function initSessionKey(): string {
 /**
  * Clear the session key (on logout)
  */
-export function clearSessionKey(): void {
+export function clearSessionKey(clerkUserId: string): void {
     if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('gityab_session_key');
+        localStorage.removeItem(`gityab_session_key_${clerkUserId}`);
     }
 }
 
 /**
  * Encrypt PAT using the session key
  */
-function encryptPatForStorage(pat: string): string {
-    const key = initSessionKey();
+function encryptPatForStorage(clerkUserId: string, pat: string): string {
+    const key = initSessionKey(clerkUserId);
     return encryptWithSessionKey(pat, key);
 }
 
 /**
  * Decrypt PAT using the session key
  */
-function decryptPatFromStorage(encryptedPat: string): string {
-    const key = initSessionKey();
+function decryptPatFromStorage(clerkUserId: string, encryptedPat: string): string {
+    const key = initSessionKey(clerkUserId);
     return decryptWithSessionKey(encryptedPat, key);
 }
 
@@ -67,7 +79,6 @@ export async function signInWithGithub() {
  */
 export async function signOut() {
     // Clerk handles sign-out via their hooks
-    clearSessionKey();
     return { error: null };
 }
 
@@ -103,7 +114,7 @@ export async function completeSetup(clerkUserId: string, pat: string) {
         return { error: { message: 'User not authenticated' } };
     }
 
-    const encryptedPat = encryptPatForStorage(pat);
+    const encryptedPat = encryptPatForStorage(clerkUserId, pat);
 
     const { data, error } = await supabase
         .from('users')
@@ -125,7 +136,7 @@ export async function getPat(clerkUserId: string): Promise<string | null> {
     }
 
     try {
-        return decryptPatFromStorage(data.encrypted_pat);
+        return decryptPatFromStorage(clerkUserId, data.encrypted_pat);
     } catch {
         return null;
     }
