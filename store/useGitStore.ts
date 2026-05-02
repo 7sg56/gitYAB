@@ -19,6 +19,8 @@ import { syncClerkUserToSupabase } from '@/lib/clerk-auth';
 
 type ViewType = 'home' | 'social' | 'feed' | 'comparator' | 'target' | 'graphs' | 'arena';
 
+export const DEMO_RIVAL_LIMIT = 1;
+
 interface GitState {
     // Auth state
     isAuthenticated: boolean;
@@ -26,6 +28,10 @@ interface GitState {
     clerkUserId: string | null;
     hasSetupCompleted: boolean;
     isLoading: boolean;
+
+    // Demo mode state
+    isDemoMode: boolean;
+    demoUsername: string;
 
     // Data state
     pat: string;
@@ -60,6 +66,10 @@ interface GitState {
     setApiError: (error: string | null) => void;
     getActiveRivals: () => string[];
     syncFromDatabase: () => Promise<void>;
+
+    // Demo mode actions
+    enterDemoMode: (username: string) => void;
+    exitDemoMode: () => void;
 }
 
 // Guard against concurrent refreshAuthState calls
@@ -74,6 +84,10 @@ export const useGitStore = create<GitState>()(
             hasSetupCompleted: false,
             isLoading: false,
             clerkUserId: null,
+
+            // Demo mode
+            isDemoMode: false,
+            demoUsername: '',
 
             pat: '',
             mainUser: '',
@@ -184,6 +198,20 @@ export const useGitStore = create<GitState>()(
             setMainUser: (mainUser) => set({ mainUser }),
 
             addRival: async (user: string) => {
+                const { isDemoMode, rivals } = get();
+
+                // Demo mode: local-only, capped
+                if (isDemoMode) {
+                    if (rivals.length >= DEMO_RIVAL_LIMIT) return;
+                    const lower = user.toLowerCase();
+                    if (rivals.includes(lower)) return;
+                    set({
+                        rivals: [...rivals, lower],
+                        enabledRivals: { ...get().enabledRivals, [lower]: true },
+                    });
+                    return;
+                }
+
                 const clerkUserId = get().clerkUserId;
                 if (!clerkUserId) return;
 
@@ -194,6 +222,17 @@ export const useGitStore = create<GitState>()(
             },
 
             removeRival: async (user: string) => {
+                const { isDemoMode } = get();
+
+                if (isDemoMode) {
+                    const lower = user.toLowerCase();
+                    const newRivals = get().rivals.filter((r) => r !== lower);
+                    const newEnabled = { ...get().enabledRivals };
+                    delete newEnabled[lower];
+                    set({ rivals: newRivals, enabledRivals: newEnabled });
+                    return;
+                }
+
                 const clerkUserId = get().clerkUserId;
                 if (!clerkUserId) return;
 
@@ -208,6 +247,15 @@ export const useGitStore = create<GitState>()(
             },
 
             toggleRival: async (user: string) => {
+                const { isDemoMode } = get();
+
+                if (isDemoMode) {
+                    const lower = user.toLowerCase();
+                    const current = get().enabledRivals[lower] !== false;
+                    set({ enabledRivals: { ...get().enabledRivals, [lower]: !current } });
+                    return;
+                }
+
                 const clerkUserId = get().clerkUserId;
                 if (!clerkUserId) return;
 
@@ -221,7 +269,11 @@ export const useGitStore = create<GitState>()(
                 }
             },
 
-            setCurrentView: (view) => set({ currentView: view }),
+            setCurrentView: (view) => {
+                // Block social graph in demo mode
+                if (get().isDemoMode && view === 'social') return;
+                set({ currentView: view });
+            },
 
             setAutoRescanEnabled: async (enabled) => {
                 const clerkUserId = get().clerkUserId;
@@ -273,6 +325,9 @@ export const useGitStore = create<GitState>()(
 
             syncFromDatabase: async () => {
                 try {
+                    // Skip DB sync in demo mode
+                    if (get().isDemoMode) return;
+
                     const clerkUserId = get().clerkUserId;
                     if (!clerkUserId) return;
 
@@ -306,6 +361,39 @@ export const useGitStore = create<GitState>()(
                     console.error('Error syncing from database:', error);
                 }
             },
+            // Demo mode actions
+            enterDemoMode: (username: string) => {
+                set({
+                    isDemoMode: true,
+                    demoUsername: username,
+                    mainUser: username,
+                    pat: '', // No PAT in demo -- unauthenticated API
+                    isAuthenticated: false,
+                    hasSetupCompleted: true,
+                    isLoading: false,
+                    rivals: [],
+                    enabledRivals: {},
+                    currentView: 'home',
+                    autoRescanEnabled: false,
+                    rightPanelOpen: true,
+                    apiError: null,
+                });
+            },
+
+            exitDemoMode: () => {
+                set({
+                    isDemoMode: false,
+                    demoUsername: '',
+                    mainUser: '',
+                    pat: '',
+                    hasSetupCompleted: false,
+                    isLoading: false,
+                    rivals: [],
+                    enabledRivals: {},
+                    currentView: 'home',
+                    apiError: null,
+                });
+            },
         }),
         {
             name: 'gityab-storage',
@@ -320,6 +408,9 @@ export const useGitStore = create<GitState>()(
                 hasSetupCompleted: state.hasSetupCompleted,
                 rivals: state.rivals,
                 enabledRivals: state.enabledRivals,
+                // Persist demo mode so page refresh keeps the session
+                isDemoMode: state.isDemoMode,
+                demoUsername: state.demoUsername,
             }),
         }
     )

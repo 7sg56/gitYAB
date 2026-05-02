@@ -138,14 +138,17 @@ const STATS_QUERY = `
   }
 `;
 
-export async function fetchGitHubStats(username: string, pat: string): Promise<GitHubUserStats | null> {
+export async function fetchGitHubStats(username: string, pat?: string): Promise<GitHubUserStats | null> {
     try {
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+        };
+        if (pat) {
+            headers['Authorization'] = `Bearer ${pat}`;
+        }
         const res = await fetch(GITHUB_GRAPHQL_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${pat}`,
-            },
+            headers,
             body: JSON.stringify({
                 query: STATS_QUERY,
                 variables: { login: username },
@@ -322,13 +325,16 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
     }
 }
 
-export async function fetchGitHubEvents(username: string, pat: string, page: number = 1): Promise<GitHubEvent[]> {
+export async function fetchGitHubEvents(username: string, pat?: string, page: number = 1): Promise<GitHubEvent[]> {
     try {
+        const headers: Record<string, string> = {
+            Accept: 'application/vnd.github.v3+json',
+        };
+        if (pat) {
+            headers['Authorization'] = `Bearer ${pat}`;
+        }
         const res = await fetch(`https://api.github.com/users/${username}/events?page=${page}&per_page=30`, {
-            headers: {
-                Authorization: `Bearer ${pat}`,
-                Accept: 'application/vnd.github.v3+json',
-            },
+            headers,
         });
         if (!res.ok) {
             const body = await res.text();
@@ -383,14 +389,17 @@ export interface UserConnections {
     following: GitHubConnection[];
 }
 
-export async function fetchUserConnections(username: string, pat: string): Promise<UserConnections | null> {
+export async function fetchUserConnections(username: string, pat?: string): Promise<UserConnections | null> {
     try {
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+        };
+        if (pat) {
+            headers['Authorization'] = `Bearer ${pat}`;
+        }
         const res = await fetch(GITHUB_GRAPHQL_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${pat}`,
-            },
+            headers,
             body: JSON.stringify({
                 query: CONNECTIONS_QUERY,
                 variables: { login: username },

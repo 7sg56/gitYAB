@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useGitStore } from '@/store/useGitStore';
+import { useGitStore, DEMO_RIVAL_LIMIT } from '@/store/useGitStore';
 import { Plus, X, Eye, EyeOff, Users, PanelRightClose, PanelRightOpen, RefreshCw, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
@@ -10,7 +10,7 @@ import Image from 'next/image';
 export function RivalsPanel() {
     const {
         mainUser, rivals, addRival, removeRival, toggleRival, enabledRivals,
-        rightPanelOpen, setRightPanelOpen, currentView
+        rightPanelOpen, setRightPanelOpen, currentView, isDemoMode
     } = useGitStore();
 
     useEffect(() => {
@@ -93,6 +93,11 @@ export function RivalsPanel() {
 
                     {/* Add rival */}
                     <div className="px-3 py-3 border-b border-border">
+                        {isDemoMode && rivals.length >= DEMO_RIVAL_LIMIT ? (
+                            <p className="text-xs text-amber-400/80 text-center py-1">
+                                Demo limit: {DEMO_RIVAL_LIMIT} rival max. Sign up for unlimited.
+                            </p>
+                        ) : (
                         <form onSubmit={handleAdd} className="flex gap-2">
                             <input
                                 type="text"
@@ -110,6 +115,7 @@ export function RivalsPanel() {
                                 {isAdding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                             </button>
                         </form>
+                        )}
                     </div>
 
                     {/* Rivals list */}

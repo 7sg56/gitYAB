@@ -2,7 +2,7 @@
 
 import { useGitStore } from '@/store/useGitStore';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
-import { Github, LayoutDashboard, Activity, Swords, Crosshair, Timer, LogOut, ChevronUp, BarChart2, Users, Zap } from 'lucide-react';
+import { Github, LayoutDashboard, Activity, Swords, Crosshair, Timer, LogOut, ChevronUp, BarChart2, Users, Zap, Menu, X, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClerk } from '@clerk/nextjs';
 import { useMemo, useState, useEffect } from 'react';
@@ -16,6 +16,8 @@ export function Sidebar() {
         autoRescanEnabled,
         setAutoRescanEnabled,
         lastScanTimestamp,
+        isDemoMode,
+        exitDemoMode,
     } = useGitStore();
 
     // Fetch main user stats for avatar
@@ -32,7 +34,8 @@ export function Sidebar() {
         { id: 'comparator' as const, label: 'Compare', icon: Swords },
         { id: 'arena' as const, label: 'Arena', icon: Zap },
         { id: 'target' as const, label: 'Target', icon: Crosshair },
-        { id: 'social' as const, label: 'Social Circle', icon: Users },
+        // Social graph is disabled in demo mode
+        ...(!isDemoMode ? [{ id: 'social' as const, label: 'Social', icon: Users }] : []),
     ];
 
     const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -82,31 +85,45 @@ export function Sidebar() {
                     })}
 
                     {/* Scan info section */}
-                    <div className="pt-4 mt-4 border-t border-border space-y-3">
-                        <div className="px-3">
-                            <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Last scan</p>
-                            <p className="text-xs text-foreground mt-0.5">{getTimeSince(lastScanTimestamp)}</p>
-                        </div>
+                    {!isDemoMode && (
+                        <div className="pt-4 mt-4 border-t border-border space-y-3">
+                            <div className="px-3">
+                                <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Last scan</p>
+                                <p className="text-xs text-foreground mt-0.5">{getTimeSince(lastScanTimestamp)}</p>
+                            </div>
 
-                        <button
-                            onClick={() => setAutoRescanEnabled(!autoRescanEnabled)}
-                            className={cn(
-                                "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
-                                autoRescanEnabled
-                                    ? "text-success bg-success/10"
-                                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                            )}
-                        >
-                            <Timer size={14} />
-                            <span className="flex-1 text-left">Auto-rescan</span>
-                            <span className={cn(
-                                "text-[10px] px-1.5 py-0.5 rounded font-medium",
-                                autoRescanEnabled ? "bg-success/20 text-success" : "bg-accent text-muted-foreground"
-                            )}>
-                                {autoRescanEnabled ? 'ON' : 'OFF'}
-                            </span>
-                        </button>
-                    </div>
+                            <button
+                                onClick={() => setAutoRescanEnabled(!autoRescanEnabled)}
+                                className={cn(
+                                    "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
+                                    autoRescanEnabled
+                                        ? "text-success bg-success/10"
+                                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                                )}
+                            >
+                                <Timer size={14} />
+                                <span className="flex-1 text-left">Auto-rescan</span>
+                                <span className={cn(
+                                    "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                                    autoRescanEnabled ? "bg-success/20 text-success" : "bg-accent text-muted-foreground"
+                                )}>
+                                    {autoRescanEnabled ? 'ON' : 'OFF'}
+                                </span>
+                            </button>
+                        </div>
+                    )}
+
+                    {isDemoMode && (
+                        <div className="pt-4 mt-4 border-t border-border px-3">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Eye size={12} className="text-amber-400" />
+                                <span className="text-[10px] text-amber-400/80 uppercase tracking-wider font-medium">Demo Mode</span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Public data only. Add a PAT for full access.
+                            </p>
+                        </div>
+                    )}
                 </nav>
             )}
 
@@ -148,12 +165,16 @@ export function Sidebar() {
                                 <button
                                     onClick={() => {
                                         setUserMenuOpen(false);
-                                        void signOut();
+                                        if (isDemoMode) {
+                                            exitDemoMode();
+                                        } else {
+                                            void signOut();
+                                        }
                                     }}
                                     className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-danger hover:bg-danger/10 transition-colors"
                                 >
                                     <LogOut size={14} />
-                                    Log out
+                                    {isDemoMode ? 'Exit Demo' : 'Log out'}
                                 </button>
                             </div>
                         </>

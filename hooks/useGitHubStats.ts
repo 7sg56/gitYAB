@@ -36,7 +36,7 @@ export function clearMemoryStatsCache() {
 const inFlightFetches = new Map<string, Promise<GitHubUserStats | null>>();
 
 export function useGitHubStats(usernames: string[]) {
-    const { pat, autoRescanEnabled, autoRescanIntervalMs, setLastScanTimestamp, setApiError } = useGitStore();
+    const { pat, autoRescanEnabled, autoRescanIntervalMs, setLastScanTimestamp, setApiError, isDemoMode } = useGitStore();
     const [data, setData] = useState<Record<string, GitHubUserStats | null>>({});
     const [loading, setLoading] = useState(false);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,7 +45,9 @@ export function useGitHubStats(usernames: string[]) {
     const fetchData = useCallback(async (forceRefresh = false) => {
         await Promise.resolve();
         const currentUsers = usernamesKey ? usernamesKey.split(',') : [];
-        if (!pat || currentUsers.length === 0) return;
+        // In demo mode we fetch without a PAT (unauthenticated API)
+        if (!isDemoMode && !pat) return;
+        if (currentUsers.length === 0) return;
 
         setLoading(true);
         const results: Record<string, GitHubUserStats | null> = {};
@@ -115,7 +117,7 @@ export function useGitHubStats(usernames: string[]) {
                     // Check if another hook instance is already fetching this user
                     let fetchPromise = inFlightFetches.get(username);
                     if (!fetchPromise) {
-                        fetchPromise = fetchGitHubStats(username, pat);
+                        fetchPromise = fetchGitHubStats(username, pat || undefined);
                         inFlightFetches.set(username, fetchPromise);
                     }
 
@@ -148,7 +150,7 @@ export function useGitHubStats(usernames: string[]) {
         setData((prev) => ({ ...prev, ...results }));
         setLastScanTimestamp(Date.now());
         setLoading(false);
-    }, [usernamesKey, pat, setLastScanTimestamp, setApiError]);
+    }, [usernamesKey, pat, isDemoMode, setLastScanTimestamp, setApiError]);
 
     const rescan = useCallback(() => {
         clearCache('stats');
@@ -169,7 +171,7 @@ export function useGitHubStats(usernames: string[]) {
             intervalRef.current = null;
         }
 
-        if (autoRescanEnabled && pat && usernamesKey) {
+        if (autoRescanEnabled && !isDemoMode && pat && usernamesKey) {
             intervalRef.current = setInterval(() => {
                 clearCache('stats');
                 clearMemoryStatsCache();
