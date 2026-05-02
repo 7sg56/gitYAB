@@ -2,6 +2,8 @@
 
 **YAB -- You Ain't Better.** A rival analysis tool for GitHub developers. Compare your stats against competitors and prove who codes harder.
 
+**[Live Demo: git-yab.vercel.app](https://git-yab.vercel.app)**
+
 ![GitYAB Dashboard](public/demo-preview.png)
 
 ## Features
