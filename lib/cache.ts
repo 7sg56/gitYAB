@@ -35,7 +35,13 @@ export function setCache<T>(key: string, data: T, ttlMs: number): void {
     try {
         localStorage.setItem(key, JSON.stringify(entry));
     } catch {
-        // localStorage full or unavailable
+        // localStorage full or unavailable -- try evicting stale entries
+        try {
+            pruneExpiredCache();
+            localStorage.setItem(key, JSON.stringify(entry));
+        } catch {
+            // Still full, give up silently
+        }
     }
 }
 
@@ -62,6 +68,31 @@ export function getCacheTimestamp(key: string): number | null {
     }
 }
 
-// Default TTLs
-export const STATS_TTL = 10 * 60 * 1000; // 10 minutes
-export const EVENTS_TTL = 5 * 60 * 1000; // 5 minutes
+/**
+ * Remove all expired cache entries to free up localStorage space
+ */
+function pruneExpiredCache(): void {
+    const now = Date.now();
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(CACHE_PREFIX)) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                    const entry = JSON.parse(raw);
+                    if (entry.expiresAt && now > entry.expiresAt) {
+                        keysToRemove.push(key);
+                    }
+                }
+            } catch {
+                keysToRemove.push(key);
+            }
+        }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+}
+
+// Default TTLs -- kept generous to avoid refetches on navigation
+export const STATS_TTL = 30 * 60 * 1000;  // 30 minutes (was 10m -- too aggressive for page switches)
+export const EVENTS_TTL = 10 * 60 * 1000; // 10 minutes (was 5m)

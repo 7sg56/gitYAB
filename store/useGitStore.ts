@@ -264,30 +264,26 @@ export const useGitStore = create<GitState>()(
                     const clerkUserId = get().clerkUserId;
                     if (!clerkUserId) return;
 
-                    // Get PAT
-                    const pat = await getPat(clerkUserId);
-                    set({ pat: pat || '' });
+                    // Fire all DB queries in parallel instead of sequentially
+                    const [pat, mainUser, settings, rivals] = await Promise.all([
+                        getPat(clerkUserId),
+                        getGithubUsername(clerkUserId),
+                        getUserSettings(clerkUserId),
+                        getRivals(clerkUserId),
+                    ]);
 
-                    // Get GitHub username
-                    const mainUser = await getGithubUsername(clerkUserId);
-                    set({ mainUser: mainUser || '' });
-
-                    // Get user settings
-                    const settings = await getUserSettings(clerkUserId);
-                    if (settings) {
-                        set({
+                    // Apply all state in a single batch update
+                    set({
+                        pat: pat || '',
+                        mainUser: mainUser || '',
+                        ...(settings ? {
                             autoRescanEnabled: settings.auto_rescan_enabled,
                             autoRescanIntervalMs: settings.auto_rescan_interval_ms,
                             rightPanelOpen: settings.right_panel_open,
                             lastScanTimestamp: settings.last_scan
                                 ? new Date(settings.last_scan).getTime()
                                 : null,
-                        });
-                    }
-
-                    // Get rivals
-                    const rivals = await getRivals(clerkUserId);
-                    set({
+                        } : {}),
                         rivals: rivals.map((r) => r.rival_username),
                         enabledRivals: rivals.reduce((acc, r) => {
                             acc[r.rival_username] = r.enabled;

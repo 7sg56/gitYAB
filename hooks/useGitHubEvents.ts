@@ -4,6 +4,25 @@ import { fetchGitHubEvents, GitHubEvent } from '@/lib/github';
 import { useGitStore } from '@/store/useGitStore';
 import { getCache, setCache, getCacheKey, clearCache, EVENTS_TTL } from '@/lib/cache';
 
+// In-memory events cache to prevent refetches on page switches
+const memoryEventsCache = new Map<string, GitHubEvent[]>();
+const memoryEventsFetchedAt = new Map<string, number>();
+const MEMORY_EVENTS_TTL = 10 * 60 * 1000; // 10 minutes
+
+function getMemoryEventsCache(key: string): GitHubEvent[] | null {
+    const data = memoryEventsCache.get(key);
+    const fetchedAt = memoryEventsFetchedAt.get(key) ?? 0;
+    if (data && (Date.now() - fetchedAt) < MEMORY_EVENTS_TTL) {
+        return data;
+    }
+    return null;
+}
+
+function setMemoryEventsCache(key: string, data: GitHubEvent[]) {
+    memoryEventsCache.set(key, data);
+    memoryEventsFetchedAt.set(key, Date.now());
+}
+
 export function useGitHubEvents(usernames: string[]) {
     const { pat, setApiError } = useGitStore();
     const [events, setEvents] = useState<GitHubEvent[]>([]);
@@ -32,8 +51,17 @@ export function useGitHubEvents(usernames: string[]) {
             const batch = currentUsers.slice(i, i + 3);
             const batchPromises = batch.map(async (username: string) => {
                 if (!forceRefresh && pageNum === 1) {
+                    // Check memory cache first
+                    const memKey = `events_${pageNum}_${username}`;
+                    const memCached = getMemoryEventsCache(memKey);
+                    if (memCached) return memCached;
+
+                    // Then localStorage
                     const cached = getCache<GitHubEvent[]>(getCacheKey(`events_${pageNum}`, username));
-                    if (cached) return cached.data;
+                    if (cached) {
+                        setMemoryEventsCache(memKey, cached.data);
+                        return cached.data;
+                    }
                 }
 
                 if (isBadCredentials) return [];
@@ -42,6 +70,7 @@ export function useGitHubEvents(usernames: string[]) {
                     const result = await fetchGitHubEvents(username, pat, pageNum);
                     if (pageNum === 1) {
                         setCache(getCacheKey(`events_${pageNum}`, username), result, EVENTS_TTL);
+                        setMemoryEventsCache(`events_${pageNum}_${username}`, result);
                     }
                     return result;
                 } catch (error: unknown) {
@@ -109,6 +138,13 @@ export function useGitHubEvents(usernames: string[]) {
 
     const rescan = useCallback(() => {
         clearCache('events_1'); // Note: doesn't clear all pages, but typically enough
+        // Also clear memory cache for events
+        for (const key of memoryEventsCache.keys()) {
+            if (key.startsWith('events_1_')) {
+                memoryEventsCache.delete(key);
+                memoryEventsFetchedAt.delete(key);
+            }
+        }
         setPage(1);
         setHasMore(true);
         fetchData(true, 1);

@@ -16,6 +16,22 @@ export interface ClerkUser {
     imageUrl?: string | null;
 }
 
+// ============================
+// In-memory cache for user lookups
+// Prevents repeated Supabase round-trips for the same user within a session
+// ============================
+const userIdCache = new Map<string, string>();           // clerkUserId -> supabase id
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const userRecordCache = new Map<string, any>();           // clerkUserId -> full user record
+const USER_RECORD_MAX_AGE = 60_000;                       // 60s before we allow a re-fetch
+const userRecordTimestamps = new Map<string, number>();    // clerkUserId -> last fetch time
+
+export function invalidateUserCache(clerkUserId: string) {
+    userIdCache.delete(clerkUserId);
+    userRecordCache.delete(clerkUserId);
+    userRecordTimestamps.delete(clerkUserId);
+}
+
 /**
  * Syncs a Clerk user to the Supabase database if they don't exist
  */
@@ -30,6 +46,10 @@ export async function syncClerkUserToSupabase(userId: string, user: any) {
             .maybeSingle();
 
         if (existingUser) {
+            // Warm the cache
+            userIdCache.set(userId, existingUser.id);
+            userRecordCache.set(userId, existingUser);
+            userRecordTimestamps.set(userId, Date.now());
             return existingUser;
         } else if (!fetchError) {
             // Create new user in Supabase
@@ -46,6 +66,11 @@ export async function syncClerkUserToSupabase(userId: string, user: any) {
                 .maybeSingle();
 
             if (newUser && !insertError) {
+                // Warm the cache
+                userIdCache.set(userId, newUser.id);
+                userRecordCache.set(userId, newUser);
+                userRecordTimestamps.set(userId, Date.now());
+
                 // Create default user settings
                 await supabase.from('user_settings').insert({
                     user_id: newUser.id,
@@ -64,9 +89,13 @@ export async function syncClerkUserToSupabase(userId: string, user: any) {
 }
 
 /**
- * Get the Supabase user ID from Clerk user ID
+ * Get the Supabase user ID from Clerk user ID (cached)
  */
 export async function getSupabaseUserId(clerkUserId: string): Promise<string | null> {
+    // Check in-memory cache first
+    const cached = userIdCache.get(clerkUserId);
+    if (cached) return cached;
+
     try {
         const { data } = await supabase
             .from('users')
@@ -74,6 +103,9 @@ export async function getSupabaseUserId(clerkUserId: string): Promise<string | n
             .eq('clerk_user_id', clerkUserId)
             .maybeSingle();
 
+        if (data?.id) {
+            userIdCache.set(clerkUserId, data.id);
+        }
         return data?.id || null;
     } catch (error) {
         console.error('Error getting Supabase user ID:', error);
@@ -89,15 +121,28 @@ export async function getCurrentUserId(clerkUserId: string): Promise<string | nu
 }
 
 /**
- * Helper function to get current user's user record
+ * Helper function to get current user's user record (cached for 60s)
  */
 export async function getCurrentUserRecord(clerkUserId: string) {
+    // Check in-memory cache
+    const cachedRecord = userRecordCache.get(clerkUserId);
+    const cachedTime = userRecordTimestamps.get(clerkUserId) ?? 0;
+    if (cachedRecord && (Date.now() - cachedTime) < USER_RECORD_MAX_AGE) {
+        return { data: cachedRecord, error: null };
+    }
+
     try {
         const { data, error } = await supabase
             .from('users')
             .select('*')
             .eq('clerk_user_id', clerkUserId)
             .maybeSingle();
+
+        if (data && !error) {
+            userRecordCache.set(clerkUserId, data);
+            userRecordTimestamps.set(clerkUserId, Date.now());
+            userIdCache.set(clerkUserId, data.id);
+        }
 
         return { data, error };
     } catch (error) {

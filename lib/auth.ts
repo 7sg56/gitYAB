@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { generateSessionKey, encryptWithSessionKey, decryptWithSessionKey } from './encryption';
-import { getCurrentUserId, getCurrentUserRecord } from './clerk-auth';
+import { getCurrentUserId, getCurrentUserRecord, invalidateUserCache } from './clerk-auth';
 
 /**
  * Authentication and data management functions
@@ -123,6 +123,9 @@ export async function completeSetup(clerkUserId: string, pat: string) {
         .select()
         .single();
 
+    // Invalidate cached user record so next read picks up the new PAT
+    if (!error) invalidateUserCache(clerkUserId);
+
     return { data, error };
 }
 
@@ -173,6 +176,9 @@ export async function updateGithubUsername(clerkUserId: string, username: string
         .select()
         .single();
 
+    // Invalidate cached user record so next read picks up the new username
+    if (!error) invalidateUserCache(clerkUserId);
+
     return { data, error };
 }
 
@@ -180,8 +186,10 @@ export async function updateGithubUsername(clerkUserId: string, username: string
  * Check if user has completed setup
  */
 export async function hasCompletedSetup(clerkUserId: string): Promise<boolean> {
-    const username = await getGithubUsername(clerkUserId);
-    const pat = await getPat(clerkUserId);
+    const [username, pat] = await Promise.all([
+        getGithubUsername(clerkUserId),
+        getPat(clerkUserId),
+    ]);
     return !!(username && pat);
 }
 
