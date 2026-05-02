@@ -140,12 +140,73 @@ const STATS_QUERY = `
 
 export async function fetchGitHubStats(username: string, pat?: string): Promise<GitHubUserStats | null> {
     try {
+        if (!pat) {
+            // Unauthenticated requests to GraphQL are hard-blocked by GitHub with a 403.
+            // Fall back to the public REST API for Demo Mode users (60 req/hr limit).
+            const [userRes, reposRes] = await Promise.all([
+                fetch(`https://api.github.com/users/${username}`),
+                fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated`)
+            ]);
+
+            if (!userRes.ok) {
+                if (userRes.status === 403 || userRes.status === 429) throw new Error('RATE_LIMIT');
+                if (userRes.status === 404) return null;
+                throw new Error('API_ERROR');
+            }
+
+            const data = await userRes.json();
+            let totalStars = 0;
+            const languageCounts: Record<string, number> = {};
+            
+            if (reposRes.ok) {
+                const repos = await reposRes.json();
+                if (Array.isArray(repos)) {
+                    repos.forEach((r: any) => {
+                        totalStars += (r.stargazers_count || 0);
+                        if (r.language) {
+                            languageCounts[r.language] = (languageCounts[r.language] || 0) + 1;
+                        }
+                    });
+                }
+            }
+
+            const languageDistribution = Object.entries(languageCounts)
+                .map(([name, count]) => ({
+                    name,
+                    count,
+                    color: '#8b949e' // Generic fallback color
+                }))
+                .sort((a, b) => b.count - a.count);
+
+            const topLanguage = languageDistribution.length > 0 ? languageDistribution[0] : null;
+
+            return {
+                login: data.login,
+                avatarUrl: data.avatar_url,
+                name: data.name || data.login,
+                followers: data.followers,
+                following: data.following,
+                totalCommitsYear: 0, // Not available without intensive scraping
+                totalIssuesYear: 0,
+                totalPRsYear: 0,
+                totalStars,
+                totalRepos: data.public_repos,
+                topLanguage,
+                latestLanguage: topLanguage,
+                languageDistribution,
+                bio: data.bio,
+                company: data.company,
+                location: data.location,
+                websiteUrl: data.blog,
+                twitterUsername: data.twitter_username,
+                createdAt: data.created_at,
+            };
+        }
+
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${pat}`,
         };
-        if (pat) {
-            headers['Authorization'] = `Bearer ${pat}`;
-        }
         const res = await fetch(GITHUB_GRAPHQL_URL, {
             method: 'POST',
             headers,
