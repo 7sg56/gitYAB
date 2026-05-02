@@ -28,11 +28,13 @@ interface GitState {
     clerkUserId: string | null;
     hasSetupCompleted: boolean;
     isLoading: boolean;
+    // Auth state
+    authView: 'signin' | 'signup' | null;
+    setAuthView: (view: 'signin' | 'signup' | null) => void;
 
     // Demo mode state
     isDemoMode: boolean;
     demoUsername: string;
-    demoAuthRequest: 'signin' | 'signup' | null;
 
     // Data state
     pat: string;
@@ -86,11 +88,13 @@ export const useGitStore = create<GitState>()(
             hasSetupCompleted: false,
             isLoading: false,
             clerkUserId: null,
+            // Auth View
+            authView: null,
+            setAuthView: (view) => set({ authView: view }),
 
             // Demo mode
             isDemoMode: false,
             demoUsername: '',
-            demoAuthRequest: null,
 
             pat: '',
             mainUser: '',
@@ -395,12 +399,11 @@ export const useGitStore = create<GitState>()(
                     enabledRivals: {},
                     currentView: 'home',
                     apiError: null,
-                    demoAuthRequest: null,
                 });
             },
 
             requestDemoAuth: (type) => {
-                // Exit demo and signal page.tsx to open the auth modal
+                // Exit demo and open the auth modal
                 set({
                     isDemoMode: false,
                     demoUsername: '',
@@ -412,7 +415,7 @@ export const useGitStore = create<GitState>()(
                     enabledRivals: {},
                     currentView: 'home',
                     apiError: null,
-                    demoAuthRequest: type,
+                    authView: type,
                 });
             },
         }),

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { LandingPage } from '@/components/LandingPage';
 import { SignInModal } from '@/components/SignInModal';
@@ -19,22 +19,10 @@ import { DemoBanner } from '@/components/DemoBanner';
 import { DemoUpgradeModal } from '@/components/DemoUpgradeModal';
 import { useGitStore, useAuthSync } from '@/store/useGitStore';
 
-type AuthView = null | 'signin' | 'signup';
-
 export default function Home() {
     const auth = useAuthSync();
-    const { currentView, apiError, setApiError, isLoading, isDemoMode, enterDemoMode, exitDemoMode, demoAuthRequest } = useGitStore();
-    const [authView, setAuthView] = useState<AuthView>(null);
+    const { currentView, apiError, setApiError, isLoading, isDemoMode, enterDemoMode, exitDemoMode, authView, setAuthView } = useGitStore();
     const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-
-    // Watch for demo auth requests from any component
-    useEffect(() => {
-        if (demoAuthRequest) {
-            setAuthView(demoAuthRequest);
-            // Clear the request so it doesn't re-trigger
-            useGitStore.setState({ demoAuthRequest: null });
-        }
-    }, [demoAuthRequest]);
 
     // Wait only for Clerk to initialize
     if (!auth.isLoaded) {
