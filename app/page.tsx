@@ -68,7 +68,7 @@ export default function Home() {
             <div className="flex flex-1 min-h-0 bg-background overflow-hidden w-full">
                 <SetupModal />
                 <Sidebar />
-                <main className="flex-1 overflow-y-auto custom-scrollbar">
+                <main className="flex-1 overflow-y-auto custom-scrollbar pb-16 md:pb-0">
                     {currentView === 'home' && <Dashboard />}
                     {currentView === 'graphs' && <Graphs />}
                     {currentView === 'feed' && <Feed />}

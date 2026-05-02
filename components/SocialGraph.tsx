@@ -206,7 +206,7 @@ export function SocialGraph() {
     }, [mainUser, activeRivals, pat]);
 
     return (
-        <div className="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto h-[calc(100vh-2rem)] flex flex-col space-y-6">
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto h-[calc(100vh-6rem)] md:h-[calc(100vh-2rem)] flex flex-col space-y-4 sm:space-y-6">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">

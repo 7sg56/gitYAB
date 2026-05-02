@@ -95,7 +95,7 @@ export function Comparator() {
 
     if (loading && !mainStats) {
         return (
-            <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-4">
+            <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-6xl mx-auto space-y-4">
                 <div className="h-8 w-48 bg-card rounded animate-pulse" />
                 <div className="h-96 bg-card rounded-lg animate-pulse" />
             </div>
@@ -110,7 +110,7 @@ export function Comparator() {
     };
 
     return (
-        <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-5">
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-6xl mx-auto space-y-4 sm:space-y-5">
             <div>
                 <h1 className="text-xl font-semibold text-foreground">Compare</h1>
                 <p className="text-sm text-muted-foreground mt-0.5">

@@ -50,7 +50,7 @@ export function Graphs() {
     };
 
     return (
-        <div className="h-full flex flex-col p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto w-full gap-4">
+        <div className="h-full flex flex-col p-3 sm:p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto w-full gap-3 sm:gap-4">
             <div className="flex-none flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground tracking-tight">Analytics</h1>
@@ -60,11 +60,11 @@ export function Graphs() {
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 grid grid-cols-12 md:grid-rows-2 gap-4">
+            <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 md:grid-rows-2 gap-3 sm:gap-4">
                 {activeRivals.length > 0 ? (
                     <>
                         {/* Contributions - Top Half */}
-                        <div className="col-span-12 row-span-1 bg-card/40 border border-border/60 rounded-xl p-4 md:p-6 flex flex-col min-h-0">
+                        <div className="md:col-span-12 row-span-1 bg-card/40 border border-border/60 rounded-xl p-3 sm:p-4 md:p-6 flex flex-col min-h-[280px] sm:min-h-0">
                             <h3 className="text-sm font-medium text-foreground mb-4 flex-none flex items-center gap-2">
                                 <Activity size={16} className="text-muted-foreground" />
                                 Contributions
@@ -84,7 +84,7 @@ export function Graphs() {
                         </div>
 
                         {/* Reach - Bottom Left */}
-                        <div className="col-span-12 md:col-span-6 row-span-1 bg-card/40 border border-border/60 rounded-xl p-4 md:p-6 flex flex-col min-h-0">
+                        <div className="md:col-span-6 row-span-1 bg-card/40 border border-border/60 rounded-xl p-3 sm:p-4 md:p-6 flex flex-col min-h-[250px] sm:min-h-0">
                             <h3 className="text-sm font-medium text-foreground mb-4 flex-none flex items-center gap-2">
                                 <Star size={16} className="text-muted-foreground" />
                                 Reach
@@ -103,7 +103,7 @@ export function Graphs() {
                         </div>
 
                         {/* Repositories - Bottom Right */}
-                        <div className="col-span-12 md:col-span-6 row-span-1 bg-card/40 border border-border/60 rounded-xl p-4 md:p-6 flex flex-col min-h-0">
+                        <div className="md:col-span-6 row-span-1 bg-card/40 border border-border/60 rounded-xl p-3 sm:p-4 md:p-6 flex flex-col min-h-[250px] sm:min-h-0">
                             <h3 className="text-sm font-medium text-foreground mb-4 flex-none flex items-center gap-2">
                                 <Users size={16} className="text-muted-foreground" />
                                 Repositories
@@ -121,7 +121,7 @@ export function Graphs() {
                         </div>
                     </>
                 ) : (
-                    <div className="md:col-span-12 border border-border/60 bg-card/40 rounded-xl p-16 text-center flex flex-col items-center justify-center min-h-[400px]">
+                    <div className="md:col-span-12 border border-border/60 bg-card/40 rounded-xl p-8 sm:p-16 text-center flex flex-col items-center justify-center min-h-[300px] sm:min-h-[400px]">
                         <div className="p-4 bg-background border border-border/60 rounded-full mb-4">
                             <Users size={24} className="text-muted-foreground" />
                         </div>

@@ -48,27 +48,27 @@ export function Dashboard() {
     const latestCreateRepo = events.find(e => e.type === 'CreateEvent' && typeof e.payload === 'object' && e.payload !== null && 'ref_type' in e.payload && e.payload.ref_type === 'repository');
 
     return (
-        <div className="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto space-y-4 sm:space-y-6">
             {/* Header */}
             {mainStats ? (
-                <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-card/20 p-6 md:p-10 mesh-gradient group">
+                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border/50 bg-card/20 p-4 sm:p-6 md:p-10 mesh-gradient group">
                     {/* Decorative elements */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 transition-colors group-hover:bg-primary/10" />
 
-                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-                        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8">
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-8">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 md:gap-8">
                             <div className="relative">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                     src={mainStats.avatarUrl}
                                     alt={`${mainStats.login}'s avatar`}
-                                    className="w-24 h-24 md:w-32 md:h-32 rounded-3xl border-2 border-border/50 shadow-2xl object-cover ring-4 ring-primary/5"
+                                    className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-2xl sm:rounded-3xl border-2 border-border/50 shadow-2xl object-cover ring-4 ring-primary/5"
                                 />
                             </div>
 
-                            <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                                <div className="flex items-center gap-4 flex-wrap justify-center md:justify-start">
-                                    <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight py-1">
+                            <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+                                <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-start">
+                                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground tracking-tight py-1">
                                         {mainStats.name}
                                     </h1>
                                 </div>
@@ -85,7 +85,7 @@ export function Dashboard() {
                                     </p>
                                 )}
 
-                                <div className="flex items-center flex-wrap justify-center md:justify-start gap-x-5 gap-y-2 text-sm text-muted-foreground mt-5">
+                                <div className="flex items-center flex-wrap justify-center sm:justify-start gap-x-3 sm:gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-5">
                                     {mainStats.location && (
                                         <span className="flex items-center gap-2 hover:text-foreground transition-colors cursor-default"><MapPin size={14} className="text-primary/70" />{mainStats.location}</span>
                                     )}
@@ -104,7 +104,7 @@ export function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="flex flex-row md:flex-col items-center gap-3 self-center md:self-end mt-4 md:mt-0">
+                        <div className="flex flex-row md:flex-col items-center gap-3 self-center md:self-end mt-2 md:mt-0">
                             <button
                                 onClick={handleRescan}
                                 disabled={loading}
@@ -132,13 +132,13 @@ export function Dashboard() {
             )}
 
             {/* Bento Grid Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 sm:gap-4">
 
                 {/* --- STATS BENTO CARDS --- */}
                 {mainStats ? (
                     <>
                         {/* Commits Bento Card */}
-                        <div className="md:col-span-12 lg:col-span-6 glass-card p-6 flex flex-col justify-between min-h-[180px]">
+                        <div className="sm:col-span-2 md:col-span-12 lg:col-span-6 glass-card p-4 sm:p-6 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">
@@ -146,7 +146,7 @@ export function Dashboard() {
                                         <span>Commits</span>
                                     </div>
                                     <div className="flex items-baseline gap-3">
-                                        <p className="text-5xl font-bold text-foreground tabular-nums tracking-tighter">
+                                        <p className="text-3xl sm:text-5xl font-bold text-foreground tabular-nums tracking-tighter">
                                             {mainStats.totalCommitsYear.toLocaleString()}
                                         </p>
                                         <span className="text-sm font-medium text-muted-foreground/60">THIS YEAR</span>
@@ -182,14 +182,14 @@ export function Dashboard() {
                         </div>
 
                         {/* Pull Requests Bento Card */}
-                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[180px]">
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-4 sm:p-6 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
                             <div className="flex justify-between items-start mb-6">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">
                                         <GitPullRequest size={16} className="text-purple-400" />
                                         <span>Pull Requests</span>
                                     </div>
-                                    <p className="text-5xl font-bold text-foreground tabular-nums tracking-tighter">
+                                    <p className="text-3xl sm:text-5xl font-bold text-foreground tabular-nums tracking-tighter">
                                         {mainStats.totalPRsYear.toLocaleString()}
                                     </p>
                                 </div>
@@ -218,14 +218,14 @@ export function Dashboard() {
                         </div>
 
                         {/* Issues Bento Card */}
-                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[180px]">
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-4 sm:p-6 flex flex-col justify-between min-h-[160px] sm:min-h-[180px]">
                             <div className="flex justify-between items-start mb-6">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">
                                         <CircleDot size={16} className="text-emerald-400" />
                                         <span>Issues</span>
                                     </div>
-                                    <p className="text-5xl font-bold text-foreground tabular-nums tracking-tighter">
+                                    <p className="text-3xl sm:text-5xl font-bold text-foreground tabular-nums tracking-tighter">
                                         {mainStats.totalIssuesYear.toLocaleString()}
                                     </p>
                                 </div>
@@ -276,7 +276,7 @@ export function Dashboard() {
 
 
                         {/* Smaller Stats Row (Language, Repos, Stars, Followers) */}
-                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[140px]">
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-4 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[140px]">
                             <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wider">
                                 <Code2 size={16} className="text-blue-400" />
                                 <span>Latest</span>
@@ -305,7 +305,7 @@ export function Dashboard() {
                             )}
                         </div>
 
-                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[140px]">
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-4 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[140px]">
                             <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wider">
                                 <BookMarked size={16} className="text-amber-400" />
                                 <span>Repositories</span>
@@ -320,7 +320,7 @@ export function Dashboard() {
                             )}
                         </div>
 
-                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[140px]">
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-4 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[140px]">
                             <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wider">
                                 <Star size={16} className="text-yellow-400" />
                                 <span>Stars Earned</span>
@@ -330,7 +330,7 @@ export function Dashboard() {
                             </p>
                         </div>
 
-                        <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[140px]">
+                        <div className="md:col-span-6 lg:col-span-3 glass-card p-4 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[140px]">
                             <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wider">
                                 <Users size={16} className="text-pink-400" />
                                 <span>Followers</span>

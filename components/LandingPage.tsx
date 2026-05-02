@@ -47,18 +47,18 @@ function MockGraph() {
                 initial={{ opacity: 0, scale: 0.5 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: seededRandom(i + 100) * 1.5, ease: 'easeOut' }}
-                className={`w-3 h-3 rounded-[2px] ${colorClass}`}
+                className={`w-2 h-2 sm:w-3 sm:h-3 rounded-[2px] ${colorClass}`}
             />
         );
     });
 
     return (
-        <div className="p-4 bg-[#0d1117] border border-[#30363d] rounded-lg shadow-2xl inline-block">
-            <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-mono text-[#8b949e]">rival_comparison.exe</span>
-                <span className="text-xs text-[#8b949e]">1,337 contributions in the last year</span>
+        <div className="p-3 sm:p-4 bg-[#0d1117] border border-[#30363d] rounded-lg shadow-2xl inline-block max-w-full overflow-hidden">
+            <div className="flex items-center justify-between mb-3 gap-2">
+                <span className="text-[10px] sm:text-xs font-mono text-[#8b949e] truncate">rival_comparison.exe</span>
+                <span className="text-[10px] sm:text-xs text-[#8b949e] shrink-0 hidden sm:inline">1,337 contributions in the last year</span>
             </div>
-            <div className="grid grid-rows-7 grid-flow-col gap-1">{days}</div>
+            <div className="grid grid-rows-7 grid-flow-col gap-[2px] sm:gap-1">{days}</div>
         </div>
     );
 }
@@ -70,7 +70,7 @@ function MockGraph() {
 function Navbar({ onSignIn }: { onSignIn: () => void }) {
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0d1117]/80 backdrop-blur-md border-b border-[#30363d]">
-            <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Github className="w-8 h-8 text-white" />
                     <span className="font-mono font-bold text-xl tracking-tight text-white">
@@ -102,7 +102,7 @@ function Navbar({ onSignIn }: { onSignIn: () => void }) {
 
 function Hero({ onSignUp }: { onSignUp: () => void }) {
     return (
-        <section className="relative pt-32 pb-20 px-6 overflow-hidden min-h-[90vh] flex items-center">
+        <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 overflow-hidden min-h-[90vh] flex items-center">
             {/* Grid background */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#30363d_1px,transparent_1px),linear-gradient(to_bottom,#30363d_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-20 pointer-events-none" />
 
@@ -119,14 +119,14 @@ function Hero({ onSignUp }: { onSignUp: () => void }) {
                             <span className="text-xs font-mono text-[#8b949e]">v2.0 is live</span>
                         </div>
 
-                        <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight leading-tight mb-6">
+                        <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-white tracking-tight leading-tight mb-4 sm:mb-6">
                             You Ain&apos;t <br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#39d353] to-[#2ea043]">
                                 Better.
                             </span>
                         </h1>
 
-                        <p className="text-lg md:text-xl text-[#8b949e] mb-8 max-w-xl leading-relaxed">
+                        <p className="text-base sm:text-lg md:text-xl text-[#8b949e] mb-6 sm:mb-8 max-w-xl leading-relaxed">
                             The competitive GitHub developer analytics tool. Connect your PAT,
                             add your rivals, and prove your dominance with year-over-year
                             stats, activity feeds, and 1v1 arena battles.
@@ -164,7 +164,7 @@ function Hero({ onSignUp }: { onSignUp: () => void }) {
                         initial={{ opacity: 0, x: 30 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.6, delay: 0.2 }}
-                        className="relative lg:h-[500px] flex items-center justify-center"
+                        className="relative hidden lg:flex lg:h-[500px] items-center justify-center"
                     >
                         {/* Glow behind graph */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-[#238636]/20 to-transparent blur-3xl rounded-full pointer-events-none" />
@@ -211,7 +211,7 @@ function DashboardPreview() {
         { label: 'Stars', value: 342, max: 500, color: '#f778ba' },
     ];
     return (
-        <div className="mt-4 grid grid-cols-4 gap-2">
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
             {stats.map((s) => (
                 <div key={s.label} className="bg-[#0d1117] rounded-md p-2 border border-[#21262d]">
                     <div className="text-[10px] text-[#8b949e] mb-1">{s.label}</div>
@@ -421,7 +421,7 @@ const itemVariants = {
 
 function Features() {
     return (
-        <section id="features" className="py-24 px-6 bg-[#0d1117] border-t border-[#30363d]">
+        <section id="features" className="py-16 sm:py-24 px-4 sm:px-6 bg-[#0d1117] border-t border-[#30363d]">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-16 text-center md:text-left">
                     <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
@@ -438,7 +438,7 @@ function Features() {
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true, margin: '-80px' }}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-3"
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
                 >
                     {features.map((feature) => {
                         const Icon = feature.icon;
@@ -500,7 +500,7 @@ const steps = [
 
 function HowItWorks() {
     return (
-        <section id="how-it-works" className="py-24 px-6 bg-[#161b22] border-t border-[#30363d]">
+        <section id="how-it-works" className="py-16 sm:py-24 px-4 sm:px-6 bg-[#161b22] border-t border-[#30363d]">
             <div className="max-w-7xl mx-auto">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">How it works</h2>
@@ -509,7 +509,7 @@ function HowItWorks() {
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-8 relative">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
                     {/* Connecting line */}
                     <div className="hidden md:block absolute top-12 left-[15%] right-[15%] h-[1px] bg-gradient-to-r from-transparent via-[#30363d] to-transparent" />
 
@@ -548,7 +548,7 @@ function HowItWorks() {
 
 function CtaSection({ onSignUp }: { onSignUp: () => void }) {
     return (
-        <section className="py-24 px-6 relative overflow-hidden">
+        <section className="py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden">
             {/* Background glow */}
             <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
                 <div className="w-[800px] h-[800px] rounded-full border-[40px] border-[#39d353] blur-3xl" />

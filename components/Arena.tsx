@@ -93,9 +93,9 @@ export function Arena() {
     }
 
     return (
-        <div className="p-4 md:p-6 lg:p-8 max-w-[1000px] mx-auto space-y-6">
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-[1000px] mx-auto space-y-4 sm:space-y-6">
             {/* Header with Rival Picker */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
                         <Zap className="text-amber-400" /> Arena
@@ -108,7 +108,7 @@ export function Arena() {
                 <div className="relative">
                     <button
                         onClick={() => setDropdownOpen(!dropdownOpen)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-card border border-border rounded-lg hover:bg-accent transition-colors min-w-[180px]"
+                        className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium bg-card border border-border rounded-lg hover:bg-accent transition-colors min-w-[140px] sm:min-w-[180px]"
                     >
                         {rival && data[rival] ? (
                             <>
@@ -160,12 +160,12 @@ export function Arena() {
             {/* VS Banner */}
             {myStats && rivalStats && rival ? (
                 <>
-                    <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card/30 p-6 md:p-8">
+                    <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-border/50 bg-card/30 p-4 sm:p-6 md:p-8">
                         {/* Background decorative gradients */}
                         <div className="absolute top-0 left-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl -ml-24 -mt-24" />
                         <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl -mr-24 -mt-24" />
 
-                        <div className="relative z-10 flex items-center justify-between gap-4">
+                        <div className="relative z-10 flex items-center justify-between gap-2 sm:gap-4">
                             {/* You */}
                             <div className="flex flex-col items-center text-center flex-1 min-w-0">
                                 <div className="relative">
@@ -175,9 +175,9 @@ export function Arena() {
                                         width={80}
                                         height={80}
                                         className={cn(
-                                            "w-16 h-16 md:w-20 md:h-20 rounded-2xl border-2 object-cover",
+                                            "w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl border-2 object-cover",
                                             overallVerdict === 'you'
-                                                ? 'border-emerald-500 ring-4 ring-emerald-500/20'
+                                                ? 'border-emerald-500 ring-2 sm:ring-4 ring-emerald-500/20'
                                                 : 'border-border/50'
                                         )}
                                         unoptimized
@@ -188,14 +188,14 @@ export function Arena() {
                                         </div>
                                     )}
                                 </div>
-                                <p className="text-sm font-bold text-foreground mt-3 truncate max-w-full">{myStats.name}</p>
-                                <p className="text-[11px] text-primary">@{myStats.login}</p>
+                                <p className="text-xs sm:text-sm font-bold text-foreground mt-2 sm:mt-3 truncate max-w-full">{myStats.name}</p>
+                                <p className="text-[10px] sm:text-[11px] text-primary">@{myStats.login}</p>
                             </div>
 
                             {/* VS */}
                             <div className="shrink-0 flex flex-col items-center gap-1">
-                                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-amber-500/20 to-rose-500/20 border border-amber-500/30 flex items-center justify-center">
-                                    <span className="text-lg md:text-xl font-black text-amber-400 tracking-tighter">VS</span>
+                                <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-amber-500/20 to-rose-500/20 border border-amber-500/30 flex items-center justify-center">
+                                    <span className="text-sm sm:text-lg md:text-xl font-black text-amber-400 tracking-tighter">VS</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-2">
                                     <span className="text-xs font-bold text-emerald-400">{wins}W</span>
@@ -219,9 +219,9 @@ export function Arena() {
                                         width={80}
                                         height={80}
                                         className={cn(
-                                            "w-16 h-16 md:w-20 md:h-20 rounded-2xl border-2 object-cover",
+                                            "w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl border-2 object-cover",
                                             overallVerdict === 'rival'
-                                                ? 'border-rose-500 ring-4 ring-rose-500/20'
+                                                ? 'border-rose-500 ring-2 sm:ring-4 ring-rose-500/20'
                                                 : 'border-border/50'
                                         )}
                                         unoptimized
@@ -232,14 +232,14 @@ export function Arena() {
                                         </div>
                                     )}
                                 </div>
-                                <p className="text-sm font-bold text-foreground mt-3 truncate max-w-full">{rivalStats.name}</p>
-                                <p className="text-[11px] text-rose-400">@{rivalStats.login}</p>
+                                <p className="text-xs sm:text-sm font-bold text-foreground mt-2 sm:mt-3 truncate max-w-full">{rivalStats.name}</p>
+                                <p className="text-[10px] sm:text-[11px] text-rose-400">@{rivalStats.login}</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Radar Chart */}
-                    <div className="glass-card rounded-xl p-5 flex flex-col items-center">
+                    <div className="glass-card rounded-xl p-4 sm:p-5 flex flex-col items-center">
                         <h3 className="text-sm font-medium text-foreground mb-2 self-start">Skill Overlay</h3>
                         <div className="w-full max-w-[400px] aspect-square">
                             <ResponsiveContainer width="100%" height="100%">
@@ -295,7 +295,7 @@ export function Arena() {
                     </div>
 
                     {/* Stat-by-Stat Comparison Bars */}
-                    <div className="glass-card rounded-xl p-5 space-y-4">
+                    <div className="glass-card rounded-xl p-4 sm:p-5 space-y-4">
                         <h3 className="text-sm font-medium text-foreground">Category Breakdown</h3>
 
                         <div className="space-y-5">
