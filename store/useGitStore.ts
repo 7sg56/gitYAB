@@ -13,11 +13,11 @@ import {
     addRival as addRivalDb,
     removeRival as removeRivalDb,
     toggleRival as toggleRivalDb,
-    initSessionKey,
+    cleanupLegacyKeys,
 } from '@/lib/auth';
 import { syncClerkUserToSupabase } from '@/lib/clerk-auth';
 
-type ViewType = 'home' | 'social' | 'feed' | 'comparator' | 'target' | 'graphs';
+type ViewType = 'home' | 'social' | 'feed' | 'comparator' | 'target' | 'graphs' | 'arena';
 
 interface GitState {
     // Auth state
@@ -149,8 +149,8 @@ export const useGitStore = create<GitState>()(
 
                     set({ isAuthenticated: true });
 
-                    // Initialize session key
-                    initSessionKey(clerkUserId);
+                    // Clean up any legacy encryption keys from localStorage
+                    cleanupLegacyKeys(clerkUserId);
 
                     // Check if setup is complete
                     const setupComplete = await hasCompletedSetup(clerkUserId);

@@ -1,63 +1,63 @@
 import { supabase } from './supabase';
-import { generateSessionKey, encryptWithSessionKey, decryptWithSessionKey } from './encryption';
 import { getCurrentUserId, getCurrentUserRecord, invalidateUserCache } from './clerk-auth';
 
 /**
  * Authentication and data management functions
  * Clerk handles authentication, Supabase handles data storage
+ *
+ * SECURITY: PAT encryption/decryption is handled server-side via /api/pat.
+ * The encryption key (PAT_ENCRYPTION_SECRET) lives exclusively in the server
+ * environment and never reaches the browser. This eliminates the previous
+ * vulnerability where the key was stored in localStorage.
  */
 
 /**
- * Initialize or retrieve the session key from localStorage, tied to a specific user
+ * One-time cleanup: remove any legacy encryption keys from localStorage
+ * that were left by the old client-side encryption implementation.
  */
-export function initSessionKey(clerkUserId: string): string {
-    if (typeof window === 'undefined') {
-        throw new Error('Session key must be initialized in browser');
-    }
-
-    const storageKey = `gityab_session_key_${clerkUserId}`;
-    let key = localStorage.getItem(storageKey);
-
-    // Fallback/Migration: check if there's an old non-user-specific key
-    if (!key) {
-        const oldKey = localStorage.getItem('gityab_session_key');
-        if (oldKey) {
-            key = oldKey;
-            localStorage.setItem(storageKey, key);
-            localStorage.removeItem('gityab_session_key');
-        }
-    }
-
-    if (!key) {
-        key = generateSessionKey();
-        localStorage.setItem(storageKey, key);
-    }
-    return key;
-}
-
-/**
- * Clear the session key (on logout)
- */
-export function clearSessionKey(clerkUserId: string): void {
-    if (typeof window !== 'undefined') {
-        localStorage.removeItem(`gityab_session_key_${clerkUserId}`);
+export function cleanupLegacyKeys(clerkUserId: string): void {
+    if (typeof window === 'undefined') return;
+    const legacyKeys = [
+        `gityab_session_key_${clerkUserId}`,
+        `gityab_sk_${clerkUserId}`,
+        'gityab_session_key',
+    ];
+    for (const key of legacyKeys) {
+        localStorage.removeItem(key);
+        try { sessionStorage.removeItem(key); } catch { /* ignore */ }
     }
 }
 
 /**
- * Encrypt PAT using the session key
+ * Encrypt PAT via server-side API route
  */
-function encryptPatForStorage(clerkUserId: string, pat: string): string {
-    const key = initSessionKey(clerkUserId);
-    return encryptWithSessionKey(pat, key);
+async function encryptPatForStorage(pat: string): Promise<string> {
+    const res = await fetch('/api/pat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'encrypt', data: pat }),
+    });
+    if (!res.ok) {
+        throw new Error('Failed to encrypt PAT');
+    }
+    const { result } = await res.json();
+    return result;
 }
 
 /**
- * Decrypt PAT using the session key
+ * Decrypt PAT via server-side API route
  */
-function decryptPatFromStorage(clerkUserId: string, encryptedPat: string): string {
-    const key = initSessionKey(clerkUserId);
-    return decryptWithSessionKey(encryptedPat, key);
+async function decryptPatFromStorage(encryptedPat: string): Promise<string> {
+    const res = await fetch('/api/pat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'decrypt', data: encryptedPat }),
+    });
+    if (!res.ok) {
+        throw new Error('Failed to decrypt PAT');
+    }
+    const { result } = await res.json();
+    return result;
 }
 
 // ========================
@@ -114,7 +114,7 @@ export async function completeSetup(clerkUserId: string, pat: string) {
         return { error: { message: 'User not authenticated' } };
     }
 
-    const encryptedPat = encryptPatForStorage(clerkUserId, pat);
+    const encryptedPat = await encryptPatForStorage(pat);
 
     const { data, error } = await supabase
         .from('users')
@@ -139,7 +139,7 @@ export async function getPat(clerkUserId: string): Promise<string | null> {
     }
 
     try {
-        return decryptPatFromStorage(clerkUserId, data.encrypted_pat);
+        return await decryptPatFromStorage(data.encrypted_pat);
     } catch {
         return null;
     }

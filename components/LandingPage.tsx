@@ -146,7 +146,7 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                         <InfoCard
                             icon={<Shield size={16} className="text-success" />}
                             title="Encrypted & Secure"
-                            description="PAT encrypted client-side before storage. Only read-only GitHub access."
+                            description="PAT encrypted server-side with AES-256-GCM. Key never reaches the browser."
                         />
                         <InfoCard
                             icon={<Trophy size={16} className="text-primary" />}

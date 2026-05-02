@@ -43,7 +43,7 @@
 6. For classic: select the `read:user` scope
 7. Click **Generate token** and copy it
 
-> **Warning**: Local storage is not fully secure against XSS. Use a read-only token with minimal scope.
+> **Note**: Use a read-only token with minimal scope (`read:user` only).
 
 ### 2. Run the app
 
@@ -61,7 +61,7 @@ On first visit, the setup modal will ask for:
 - **GitHub Username** -- your GitHub handle (e.g. `torvalds`)
 - **Personal Access Token** -- the token you just created
 
-Both are stored in your browser's `localStorage`. Nothing is sent to any server other than GitHub's API.
+Your PAT is encrypted server-side (AES-256-GCM) before being stored. The encryption key never reaches the browser.
 
 After setup, add rival usernames from the right panel to start comparing.
 
