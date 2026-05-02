@@ -1,3 +1,25 @@
+export interface ContributionDay {
+    contributionCount: number;
+    date: string;
+    weekday: number;
+    color: string;
+}
+
+export interface ContributionWeek {
+    contributionDays: ContributionDay[];
+}
+
+export interface ContributionCalendar {
+    totalContributions: number;
+    weeks: ContributionWeek[];
+}
+
+export interface LanguageBreakdown {
+    name: string;
+    color: string;
+    count: number;
+}
+
 export interface GitHubUserStats {
     login: string;
     avatarUrl: string;
@@ -10,6 +32,9 @@ export interface GitHubUserStats {
     totalStars: number;
     totalRepos: number;
     topLanguage?: { name: string; color: string } | null;
+    latestLanguage?: { name: string; color: string; repoName?: string } | null;
+    languageDistribution?: LanguageBreakdown[];
+    contributionCalendar?: ContributionCalendar | null;
     bio?: string | null;
     company?: string | null;
     location?: string | null;
@@ -66,9 +91,11 @@ const STATS_QUERY = `
       following {
         totalCount
       }
-      repositories(ownerAffiliations: OWNER, isFork: false, first: 100, privacy: PUBLIC) {
+      repositories(ownerAffiliations: OWNER, isFork: false, first: 100, privacy: PUBLIC, orderBy: {field: PUSHED_AT, direction: DESC}) {
         totalCount
         nodes {
+          name
+          updatedAt
           stargazers {
             totalCount
           }
@@ -83,6 +110,17 @@ const STATS_QUERY = `
         totalIssueContributions
         totalPullRequestContributions
         restrictedContributionsCount
+        contributionCalendar {
+          totalContributions
+          weeks {
+            contributionDays {
+              contributionCount
+              date
+              weekday
+              color
+            }
+          }
+        }
       }
       issues(first: 5, orderBy: {field: CREATED_AT, direction: DESC}) {
         nodes {
@@ -144,6 +182,8 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
                     repositories: {
                         totalCount: number;
                         nodes: Array<{
+                            name: string;
+                            updatedAt: string;
                             stargazers: { totalCount: number };
                             primaryLanguage?: { name: string; color: string } | null;
                         }>;
@@ -153,6 +193,17 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
                         totalIssueContributions: number;
                         totalPullRequestContributions: number;
                         restrictedContributionsCount: number;
+                        contributionCalendar?: {
+                            totalContributions: number;
+                            weeks: Array<{
+                                contributionDays: Array<{
+                                    contributionCount: number;
+                                    date: string;
+                                    weekday: number;
+                                    color: string;
+                                }>;
+                            }>;
+                        };
                     };
                     issues: {
                         nodes: Array<{
@@ -203,6 +254,15 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
             }
         });
 
+        // Latest language: from the most recently updated repo that has a language
+        // Repos are already ordered by PUSHED_AT DESC from the query
+        const latestRepo = user.repositories?.nodes?.find(
+            (repo: { primaryLanguage?: { name: string; color: string } | null }) => repo.primaryLanguage
+        );
+        const latestLanguage = latestRepo?.primaryLanguage
+            ? { name: latestRepo.primaryLanguage.name, color: latestRepo.primaryLanguage.color, repoName: latestRepo.name }
+            : null;
+
         let topLanguage: { name: string; color: string } | null = null;
         let maxCount = 0;
         for (const [name, data] of Object.entries(languages)) {
@@ -212,6 +272,24 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
             }
         }
 
+        // Build language distribution array sorted by count
+        const languageDistribution: LanguageBreakdown[] = Object.entries(languages)
+            .map(([name, data]) => ({ name, color: data.color, count: data.count }))
+            .sort((a, b) => b.count - a.count);
+
+        // Extract contribution calendar
+        const rawCalendar = user.contributionsCollection?.contributionCalendar;
+        const contributionCalendar: ContributionCalendar | null = rawCalendar ? {
+            totalContributions: rawCalendar.totalContributions ?? 0,
+            weeks: (rawCalendar.weeks ?? []).map((w: { contributionDays: ContributionDay[] }) => ({
+                contributionDays: (w.contributionDays ?? []).map((d: ContributionDay) => ({
+                    contributionCount: d.contributionCount ?? 0,
+                    date: d.date ?? '',
+                    weekday: d.weekday ?? 0,
+                    color: d.color ?? '#161b22',
+                })),
+            })),
+        } : null;
 
         return {
             login: user.login,
@@ -225,6 +303,9 @@ export async function fetchGitHubStats(username: string, pat: string): Promise<G
             totalIssuesYear: user.contributionsCollection?.totalIssueContributions || 0,
             totalPRsYear: user.contributionsCollection?.totalPullRequestContributions || 0,
             topLanguage,
+            latestLanguage,
+            languageDistribution,
+            contributionCalendar,
             bio: user.bio,
             company: user.company,
             location: user.location,

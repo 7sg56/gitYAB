@@ -2,7 +2,7 @@
 
 import { useGitStore } from '@/store/useGitStore';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
-import { Github, LayoutDashboard, Activity, Swords, Crosshair, Timer, LogOut, ChevronUp, BarChart2, Users } from 'lucide-react';
+import { Github, LayoutDashboard, Activity, Swords, Crosshair, Timer, LogOut, ChevronUp, BarChart2, Users, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClerk } from '@clerk/nextjs';
 import { useMemo, useState, useEffect } from 'react';
@@ -30,6 +30,7 @@ export function Sidebar() {
         { id: 'graphs' as const, label: 'Analytics', icon: BarChart2 },
         { id: 'feed' as const, label: 'Activity', icon: Activity },
         { id: 'comparator' as const, label: 'Compare', icon: Swords },
+        { id: 'arena' as const, label: 'Arena', icon: Zap },
         { id: 'target' as const, label: 'Target', icon: Crosshair },
         { id: 'social' as const, label: 'Social Circle', icon: Users },
     ];

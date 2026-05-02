@@ -4,7 +4,9 @@ export interface CachedEntry<T> {
     expiresAt: number;
 }
 
-const CACHE_PREFIX = 'gityab_cache_';
+// Bump this version when the cached data shape changes to auto-invalidate stale entries
+const CACHE_VERSION = 2;
+const CACHE_PREFIX = `gityab_v${CACHE_VERSION}_`;
 
 export function getCacheKey(namespace: string, id: string): string {
     return `${CACHE_PREFIX}${namespace}_${id}`;
@@ -69,14 +71,23 @@ export function getCacheTimestamp(key: string): number | null {
 }
 
 /**
- * Remove all expired cache entries to free up localStorage space
+ * Remove all expired cache entries to free up localStorage space.
+ * Also removes entries from prior cache versions.
  */
 function pruneExpiredCache(): void {
     const now = Date.now();
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith(CACHE_PREFIX)) {
+        if (!key) continue;
+
+        // Remove old version entries (gityab_cache_, gityab_v1_, etc.)
+        if (key.startsWith('gityab_') && !key.startsWith(CACHE_PREFIX)) {
+            keysToRemove.push(key);
+            continue;
+        }
+
+        if (key.startsWith(CACHE_PREFIX)) {
             try {
                 const raw = localStorage.getItem(key);
                 if (raw) {
@@ -91,6 +102,11 @@ function pruneExpiredCache(): void {
         }
     }
     keysToRemove.forEach((key) => localStorage.removeItem(key));
+}
+
+// Clean up old cache versions on module load
+if (typeof window !== 'undefined') {
+    try { pruneExpiredCache(); } catch { /* SSR safety */ }
 }
 
 // Default TTLs -- kept generous to avoid refetches on navigation

@@ -13,6 +13,7 @@ import { TargetRival } from '@/components/TargetRival';
 import { RivalsPanel } from '@/components/RivalsPanel';
 import { Graphs } from '@/components/Graphs';
 import { SocialGraph } from '@/components/SocialGraph';
+import { Arena } from '@/components/Arena';
 import { useGitStore, useAuthSync } from '@/store/useGitStore';
 
 type AuthView = null | 'signin' | 'signup';
@@ -85,6 +86,7 @@ export default function Home() {
                     {currentView === 'graphs' && <Graphs />}
                     {currentView === 'feed' && <Feed />}
                     {currentView === 'comparator' && <Comparator />}
+                    {currentView === 'arena' && <Arena />}
                     {currentView === 'target' && <TargetRival />}
                     {currentView === 'social' && <SocialGraph />}
                 </main>

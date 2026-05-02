@@ -279,19 +279,24 @@ export function Dashboard() {
                         <div className="md:col-span-6 lg:col-span-3 glass-card p-6 flex flex-col justify-between min-h-[140px]">
                             <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wider">
                                 <Code2 size={16} className="text-blue-400" />
-                                <span>Top Language</span>
+                                <span>Latest</span>
                             </div>
-                            {mainStats.topLanguage ? (
+                            {mainStats.latestLanguage ? (
                                 <div className="mt-auto">
                                     <div className="flex items-center gap-3">
                                         <div
                                             className="w-4 h-4 rounded-full shadow-sm ring-2 ring-background"
-                                            style={{ backgroundColor: mainStats.topLanguage.color }}
+                                            style={{ backgroundColor: mainStats.latestLanguage.color }}
                                         />
                                         <p className="text-3xl font-bold text-foreground tracking-tight">
-                                            {mainStats.topLanguage.name}
+                                            {mainStats.latestLanguage.name}
                                         </p>
                                     </div>
+                                    {mainStats.latestLanguage.repoName && (
+                                        <p className="text-[11px] text-muted-foreground mt-1 ml-7 truncate">
+                                            {mainStats.latestLanguage.repoName}
+                                        </p>
+                                    )}
                                 </div>
                             ) : (
                                 <p className="text-3xl font-bold text-foreground tracking-tight mt-auto">
