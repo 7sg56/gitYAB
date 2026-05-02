@@ -305,7 +305,13 @@ export const useGitStore = create<GitState>()(
             setLastScanTimestamp: (ts) => set({ lastScanTimestamp: ts }),
 
             setRightPanelOpen: async (open) => {
-                const clerkUserId = get().clerkUserId;
+                const { isDemoMode, clerkUserId } = get();
+                
+                if (isDemoMode) {
+                    set({ rightPanelOpen: open });
+                    return;
+                }
+
                 if (!clerkUserId) return;
 
                 const { error } = await updateUserSettings(clerkUserId, { right_panel_open: open });
