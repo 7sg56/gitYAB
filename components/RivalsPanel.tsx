@@ -55,10 +55,24 @@ export function RivalsPanel() {
 
     return (
         <>
+            {/* Backdrop overlay for mobile/tablet */}
+            {rightPanelOpen && (
+                <div 
+                    className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[50] lg:hidden"
+                    onClick={() => setRightPanelOpen(false)}
+                />
+            )}
+            
             <div
                 className={cn(
-                    "h-full bg-card flex flex-col shrink-0 transition-all duration-300 ease-in-out overflow-hidden border-border",
-                    rightPanelOpen ? "w-72 border-l" : "w-0 border-l-0"
+                    // Base styles
+                    "bg-card flex flex-col shrink-0 transition-all duration-300 ease-in-out overflow-hidden z-[60]",
+                    // Desktop styles (lg+)
+                    "lg:h-full lg:static",
+                    rightPanelOpen ? "lg:w-72 lg:border-l border-border" : "lg:w-0 lg:border-l-0",
+                    // Mobile styles (< lg)
+                    "fixed right-0 top-0 bottom-0 w-72 border-l border-border shadow-2xl lg:shadow-none",
+                    rightPanelOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"
                 )}
             >
                 <div className="w-72 h-full flex flex-col shrink-0">
