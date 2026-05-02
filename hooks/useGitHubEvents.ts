@@ -23,6 +23,9 @@ function setMemoryEventsCache(key: string, data: GitHubEvent[]) {
     memoryEventsFetchedAt.set(key, Date.now());
 }
 
+// Track in-flight event fetches to prevent duplicate concurrent requests
+const inFlightEventFetches = new Map<string, Promise<GitHubEvent[]>>();
+
 export function useGitHubEvents(usernames: string[]) {
     const { pat, setApiError } = useGitStore();
     const [events, setEvents] = useState<GitHubEvent[]>([]);
@@ -45,50 +48,53 @@ export function useGitHubEvents(usernames: string[]) {
 
         let isRateLimited = false;
         let isBadCredentials = false;
-        const allEventPromises = [];
 
-        for (let i = 0; i < currentUsers.length; i += 3) {
-            const batch = currentUsers.slice(i, i + 3);
-            const batchPromises = batch.map(async (username: string) => {
-                if (!forceRefresh && pageNum === 1) {
-                    // Check memory cache first
-                    const memKey = `events_${pageNum}_${username}`;
-                    const memCached = getMemoryEventsCache(memKey);
-                    if (memCached) return memCached;
+        // Fetch ALL users in parallel -- no artificial delays.
+        // With a PAT the rate limit is 5000 req/hr, so batching with
+        // 500ms sleeps was adding unnecessary latency.
+        const allEventPromises = currentUsers.map(async (username: string) => {
+            if (!forceRefresh && pageNum === 1) {
+                // Check memory cache first
+                const memKey = `events_${pageNum}_${username}`;
+                const memCached = getMemoryEventsCache(memKey);
+                if (memCached) return memCached;
 
-                    // Then localStorage
-                    const cached = getCache<GitHubEvent[]>(getCacheKey(`events_${pageNum}`, username));
-                    if (cached) {
-                        setMemoryEventsCache(memKey, cached.data);
-                        return cached.data;
-                    }
+                // Then localStorage
+                const cached = getCache<GitHubEvent[]>(getCacheKey(`events_${pageNum}`, username));
+                if (cached) {
+                    setMemoryEventsCache(memKey, cached.data);
+                    return cached.data;
                 }
-
-                if (isBadCredentials) return [];
-
-                try {
-                    const result = await fetchGitHubEvents(username, pat, pageNum);
-                    if (pageNum === 1) {
-                        setCache(getCacheKey(`events_${pageNum}`, username), result, EVENTS_TTL);
-                        setMemoryEventsCache(`events_${pageNum}_${username}`, result);
-                    }
-                    return result;
-                } catch (error: unknown) {
-                    if (error instanceof Error) {
-                        if (error.message === 'RATE_LIMIT') isRateLimited = true;
-                        if (error.message === 'BAD_CREDENTIALS') isBadCredentials = true;
-                    }
-                    return [];
-                }
-            });
-            allEventPromises.push(...batchPromises);
-
-            if (isBadCredentials) break;
-
-            if (i + 3 < currentUsers.length) {
-                await new Promise((resolve) => setTimeout(resolve, 500));
             }
-        }
+
+            if (isBadCredentials) return [];
+
+            try {
+                // Deduplicate in-flight fetches (e.g. Dashboard + Feed both
+                // requesting the same user's events simultaneously)
+                const fetchKey = `${username}_${pageNum}`;
+                let fetchPromise = inFlightEventFetches.get(fetchKey);
+                if (!fetchPromise) {
+                    fetchPromise = fetchGitHubEvents(username, pat, pageNum);
+                    inFlightEventFetches.set(fetchKey, fetchPromise);
+                }
+
+                const result = await fetchPromise;
+                inFlightEventFetches.delete(fetchKey);
+
+                if (pageNum === 1) {
+                    setCache(getCacheKey(`events_${pageNum}`, username), result, EVENTS_TTL);
+                    setMemoryEventsCache(`events_${pageNum}_${username}`, result);
+                }
+                return result;
+            } catch (error: unknown) {
+                if (error instanceof Error) {
+                    if (error.message === 'RATE_LIMIT') isRateLimited = true;
+                    if (error.message === 'BAD_CREDENTIALS') isBadCredentials = true;
+                }
+                return [];
+            }
+        });
 
         const results = await Promise.all(allEventPromises);
 

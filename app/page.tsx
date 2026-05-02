@@ -14,6 +14,7 @@ import { RivalsPanel } from '@/components/RivalsPanel';
 import { Graphs } from '@/components/Graphs';
 import { SocialGraph } from '@/components/SocialGraph';
 import { Arena } from '@/components/Arena';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import { useGitStore, useAuthSync } from '@/store/useGitStore';
 
 type AuthView = null | 'signin' | 'signup';
@@ -25,14 +26,7 @@ export default function Home() {
 
     // Wait only for Clerk to initialize
     if (!auth.isLoaded) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-background text-foreground">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    Loading...
-                </div>
-            </div>
-        );
+        return <LoadingScreen message="Initializing..." />;
     }
 
     // Unauthenticated flow: landing page or auth forms
@@ -57,16 +51,9 @@ export default function Home() {
         );
     }
 
-    // Authenticated but still loading DB data
+    // Authenticated but still loading DB data (first-time visitors only)
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-background text-foreground">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    Syncing your data...
-                </div>
-            </div>
-        );
+        return <LoadingScreen message="Syncing your data..." />;
     }
 
     // Authenticated app

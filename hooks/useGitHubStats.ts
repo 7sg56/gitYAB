@@ -81,10 +81,9 @@ export function useGitHubStats(usernames: string[]) {
             setData((prev) => ({ ...prev, ...results }));
         }
 
-        // Phase 3: For remaining users, check localStorage + DB cache + API in parallel batches
-        for (let i = 0; i < usersNeedingFetch.length; i += 3) {
-            const batch = usersNeedingFetch.slice(i, i + 3);
-            await Promise.all(batch.map(async (username: string) => {
+        // Phase 3: For remaining users, check localStorage + DB cache + API in parallel
+        // No artificial delays -- with a PAT the rate limit is 5000 req/hr.
+        await Promise.all(usersNeedingFetch.map(async (username: string) => {
                 if (!forceRefresh) {
                     // 1. Check localStorage (fast, synchronous)
                     const localCached = getCache<GitHubUserStats>(getCacheKey('stats', username));
@@ -137,14 +136,7 @@ export function useGitHubStats(usernames: string[]) {
                         if (error.message === 'BAD_CREDENTIALS') isBadCredentials = true;
                     }
                 }
-            }));
-
-            if (isBadCredentials) break;
-
-            if (i + 3 < usersNeedingFetch.length) {
-                await new Promise((resolve) => setTimeout(resolve, 500));
-            }
-        }
+        }));
 
         if (isBadCredentials) {
             setApiError('Invalid GitHub Personal Access Token. Please check your credentials.');
