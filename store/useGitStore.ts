@@ -6,7 +6,6 @@ import {
     completeSetup,
     getPat,
     getGithubUsername,
-    hasCompletedSetup,
     getUserSettings,
     updateUserSettings,
     getRivals,
@@ -14,6 +13,7 @@ import {
     removeRival as removeRivalDb,
     toggleRival as toggleRivalDb,
     cleanupLegacyKeys,
+    clearPatCache,
 } from '@/lib/auth';
 import { syncClerkUserToSupabase } from '@/lib/clerk-auth';
 
@@ -93,8 +93,8 @@ export const useGitStore = create<GitState>()(
             },
 
             signOut: async () => {
-                // We DON'T clear the session key on sign out anymore so that it persists 
-                // for the next time the same user logs into this browser.
+                // Clear cached PAT decryption on sign out
+                clearPatCache();
                 set({
                     isAuthenticated: false,
                     clerkUserId: null,
@@ -132,9 +132,6 @@ export const useGitStore = create<GitState>()(
                 isRefreshing = true;
                 set({ isLoading: true });
                 try {
-                    // Auth state is now managed by Clerk hooks
-                    // This function is called from components that use useAuth
-                    // So we just need to sync data from database
                     const clerkUserId = get().clerkUserId;
 
                     if (!clerkUserId) {
@@ -152,13 +149,14 @@ export const useGitStore = create<GitState>()(
                     // Clean up any legacy encryption keys from localStorage
                     cleanupLegacyKeys(clerkUserId);
 
-                    // Check if setup is complete
-                    const setupComplete = await hasCompletedSetup(clerkUserId);
-                    set({ hasSetupCompleted: setupComplete });
+                    // Sync everything from DB in one parallel batch.
+                    // This replaces the old hasCompletedSetup() -> syncFromDatabase()
+                    // sequential waterfall that was causing 2x /api/pat cold starts.
+                    await get().syncFromDatabase();
 
-                    if (setupComplete) {
-                        await get().syncFromDatabase();
-                    }
+                    // Determine setup completion from the data we just synced
+                    const { pat, mainUser } = get();
+                    set({ hasSetupCompleted: !!(pat && mainUser) });
                 } catch (error) {
                     console.error('Error refreshing auth state:', error);
                 } finally {

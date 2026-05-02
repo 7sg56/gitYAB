@@ -31,6 +31,17 @@ export function cleanupLegacyKeys(clerkUserId: string): void {
 /**
  * Encrypt PAT via server-side API route
  */
+// In-memory PAT decryption cache -- avoids repeated /api/pat serverless
+// cold starts on Vercel.  Keyed by the encrypted ciphertext so a changed
+// PAT automatically invalidates the cache.
+let _cachedDecryptedPat: string | null = null;
+let _cachedEncryptedInput: string | null = null;
+
+export function clearPatCache() {
+    _cachedDecryptedPat = null;
+    _cachedEncryptedInput = null;
+}
+
 async function encryptPatForStorage(pat: string): Promise<string> {
     const res = await fetch('/api/pat', {
         method: 'POST',
@@ -41,6 +52,8 @@ async function encryptPatForStorage(pat: string): Promise<string> {
         throw new Error('Failed to encrypt PAT');
     }
     const { result } = await res.json();
+    // Invalidate decrypt cache since PAT changed
+    clearPatCache();
     return result;
 }
 
@@ -48,6 +61,11 @@ async function encryptPatForStorage(pat: string): Promise<string> {
  * Decrypt PAT via server-side API route
  */
 async function decryptPatFromStorage(encryptedPat: string): Promise<string> {
+    // Return cached result if we already decrypted this exact ciphertext
+    if (_cachedEncryptedInput === encryptedPat && _cachedDecryptedPat !== null) {
+        return _cachedDecryptedPat;
+    }
+
     const res = await fetch('/api/pat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -57,6 +75,11 @@ async function decryptPatFromStorage(encryptedPat: string): Promise<string> {
         throw new Error('Failed to decrypt PAT');
     }
     const { result } = await res.json();
+
+    // Cache so subsequent calls skip the serverless round-trip
+    _cachedEncryptedInput = encryptedPat;
+    _cachedDecryptedPat = result;
+
     return result;
 }
 
