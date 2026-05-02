@@ -2,7 +2,7 @@
 
 import { useGitStore } from '@/store/useGitStore';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
-import { Github, LayoutDashboard, Activity, Swords, Crosshair, Timer, LogOut, ChevronUp, BarChart2, Users, Zap, Menu, X, Eye } from 'lucide-react';
+import { Github, LayoutDashboard, Activity, Swords, Crosshair, Timer, LogOut, ChevronUp, BarChart2, Users, Zap, Menu, X, Eye, LogIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClerk } from '@clerk/nextjs';
 import { useMemo, useState, useEffect } from 'react';
@@ -18,6 +18,7 @@ export function Sidebar() {
         lastScanTimestamp,
         isDemoMode,
         exitDemoMode,
+        requestDemoAuth,
     } = useGitStore();
 
     // Fetch main user stats for avatar
@@ -114,14 +115,29 @@ export function Sidebar() {
                     )}
 
                     {isDemoMode && (
-                        <div className="pt-4 mt-4 border-t border-border px-3">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Eye size={12} className="text-amber-400" />
-                                <span className="text-[10px] text-amber-400/80 uppercase tracking-wider font-medium">Demo Mode</span>
+                        <div className="pt-4 mt-4 border-t border-border px-3 space-y-3">
+                            <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Eye size={12} className="text-amber-400" />
+                                    <span className="text-[10px] text-amber-400/80 uppercase tracking-wider font-medium">Demo Mode</span>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                    Public data only. Sign in for full access.
+                                </p>
                             </div>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                Public data only. Add a PAT for full access.
-                            </p>
+                            <button
+                                onClick={() => requestDemoAuth('signup')}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-[#238636] hover:bg-[#2ea043] text-white transition-colors"
+                            >
+                                <LogIn size={14} />
+                                Sign Up
+                            </button>
+                            <button
+                                onClick={() => requestDemoAuth('signin')}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                            >
+                                Already have an account? Sign in
+                            </button>
                         </div>
                     )}
                 </nav>

@@ -1,11 +1,11 @@
 'use client';
 
 import { useGitStore, DEMO_RIVAL_LIMIT } from '@/store/useGitStore';
-import { KeyRound, X, AlertTriangle } from 'lucide-react';
+import { LogIn, X, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 
-export function DemoBanner({ onUpgrade }: { onUpgrade: () => void }) {
-    const { isDemoMode } = useGitStore();
+export function DemoBanner() {
+    const { isDemoMode, requestDemoAuth } = useGitStore();
     const [dismissed, setDismissed] = useState(false);
 
     if (!isDemoMode || dismissed) return null;
@@ -18,11 +18,11 @@ export function DemoBanner({ onUpgrade }: { onUpgrade: () => void }) {
                     <span className="hidden sm:inline">Demo mode -- </span>
                     Limited to public data &amp; {DEMO_RIVAL_LIMIT} rival.{' '}
                     <button
-                        onClick={onUpgrade}
+                        onClick={() => requestDemoAuth('signup')}
                         className="inline-flex items-center gap-1 text-amber-200 hover:text-white underline underline-offset-2 transition-colors"
                     >
-                        <KeyRound size={11} />
-                        Add your PAT for full access
+                        <LogIn size={11} />
+                        Sign up for full access
                     </button>
                 </p>
             </div>

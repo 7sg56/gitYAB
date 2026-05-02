@@ -32,6 +32,7 @@ interface GitState {
     // Demo mode state
     isDemoMode: boolean;
     demoUsername: string;
+    demoAuthRequest: 'signin' | 'signup' | null;
 
     // Data state
     pat: string;
@@ -70,6 +71,7 @@ interface GitState {
     // Demo mode actions
     enterDemoMode: (username: string) => void;
     exitDemoMode: () => void;
+    requestDemoAuth: (type: 'signin' | 'signup') => void;
 }
 
 // Guard against concurrent refreshAuthState calls
@@ -88,6 +90,7 @@ export const useGitStore = create<GitState>()(
             // Demo mode
             isDemoMode: false,
             demoUsername: '',
+            demoAuthRequest: null,
 
             pat: '',
             mainUser: '',
@@ -392,6 +395,24 @@ export const useGitStore = create<GitState>()(
                     enabledRivals: {},
                     currentView: 'home',
                     apiError: null,
+                    demoAuthRequest: null,
+                });
+            },
+
+            requestDemoAuth: (type) => {
+                // Exit demo and signal page.tsx to open the auth modal
+                set({
+                    isDemoMode: false,
+                    demoUsername: '',
+                    mainUser: '',
+                    pat: '',
+                    hasSetupCompleted: false,
+                    isLoading: false,
+                    rivals: [],
+                    enabledRivals: {},
+                    currentView: 'home',
+                    apiError: null,
+                    demoAuthRequest: type,
                 });
             },
         }),

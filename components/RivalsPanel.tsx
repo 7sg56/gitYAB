@@ -10,7 +10,7 @@ import Image from 'next/image';
 export function RivalsPanel() {
     const {
         mainUser, rivals, addRival, removeRival, toggleRival, enabledRivals,
-        rightPanelOpen, setRightPanelOpen, currentView, isDemoMode
+        rightPanelOpen, setRightPanelOpen, currentView, isDemoMode, requestDemoAuth
     } = useGitStore();
 
     useEffect(() => {
@@ -94,9 +94,17 @@ export function RivalsPanel() {
                     {/* Add rival */}
                     <div className="px-3 py-3 border-b border-border">
                         {isDemoMode && rivals.length >= DEMO_RIVAL_LIMIT ? (
-                            <p className="text-xs text-amber-400/80 text-center py-1">
-                                Demo limit: {DEMO_RIVAL_LIMIT} rival max. Sign up for unlimited.
-                            </p>
+                            <div className="text-center py-2 space-y-2">
+                                <p className="text-xs text-amber-400/80">
+                                    Demo limit: {DEMO_RIVAL_LIMIT} rival max.
+                                </p>
+                                <button
+                                    onClick={() => requestDemoAuth('signup')}
+                                    className="text-xs font-medium text-[#58a6ff] hover:text-white hover:underline transition-colors"
+                                >
+                                    Sign up for unlimited rivals
+                                </button>
+                            </div>
                         ) : (
                         <form onSubmit={handleAdd} className="flex gap-2">
                             <input

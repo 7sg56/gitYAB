@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { LandingPage } from '@/components/LandingPage';
 import { SignInModal } from '@/components/SignInModal';
@@ -23,9 +23,18 @@ type AuthView = null | 'signin' | 'signup';
 
 export default function Home() {
     const auth = useAuthSync();
-    const { currentView, apiError, setApiError, isLoading, isDemoMode, enterDemoMode, exitDemoMode } = useGitStore();
+    const { currentView, apiError, setApiError, isLoading, isDemoMode, enterDemoMode, exitDemoMode, demoAuthRequest } = useGitStore();
     const [authView, setAuthView] = useState<AuthView>(null);
     const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+
+    // Watch for demo auth requests from any component
+    useEffect(() => {
+        if (demoAuthRequest) {
+            setAuthView(demoAuthRequest);
+            // Clear the request so it doesn't re-trigger
+            useGitStore.setState({ demoAuthRequest: null });
+        }
+    }, [demoAuthRequest]);
 
     // Wait only for Clerk to initialize
     if (!auth.isLoaded) {
@@ -36,7 +45,7 @@ export default function Home() {
     if (isDemoMode) {
         return (
             <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
-                <DemoBanner onUpgrade={() => setUpgradeModalOpen(true)} />
+                <DemoBanner />
                 {apiError && (
                     <div className="flex-none bg-danger/10 border-b border-danger/20 px-4 py-2 flex items-center justify-between z-[60]">
                         <p className="text-xs text-danger/90 font-medium">{apiError}</p>
@@ -59,11 +68,6 @@ export default function Home() {
                 <DemoUpgradeModal
                     open={upgradeModalOpen}
                     onClose={() => setUpgradeModalOpen(false)}
-                    onSignUp={() => {
-                        exitDemoMode();
-                        setUpgradeModalOpen(false);
-                        setAuthView('signup');
-                    }}
                 />
             </div>
         );
