@@ -161,7 +161,7 @@ export async function fetchGitHubStats(username: string, pat?: string): Promise<
             if (reposRes.ok) {
                 const repos = await reposRes.json();
                 if (Array.isArray(repos)) {
-                    repos.forEach((r: any) => {
+                    repos.forEach((r: { stargazers_count?: number; language?: string | null }) => {
                         totalStars += (r.stargazers_count || 0);
                         if (r.language) {
                             languageCounts[r.language] = (languageCounts[r.language] || 0) + 1;
