@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
     Github,
@@ -16,11 +17,14 @@ import {
     UserPlus,
     BarChart3,
     Twitter,
+    Loader2,
+    Eye,
 } from 'lucide-react';
 
 interface LandingPageProps {
     onSignIn: () => void;
     onSignUp: () => void;
+    onTryDemo: (username: string) => void;
 }
 
 // ========================
@@ -100,9 +104,44 @@ function Navbar({ onSignIn }: { onSignIn: () => void }) {
 // Hero
 // ========================
 
-function Hero({ onSignUp }: { onSignUp: () => void }) {
+function Hero({ onSignUp, onTryDemo }: { onSignUp: () => void; onTryDemo: (username: string) => void }) {
+    const [demoUsername, setDemoUsername] = useState('');
+    const [demoLoading, setDemoLoading] = useState(false);
+    const [demoError, setDemoError] = useState<string | null>(null);
+
+    const handleTryDemo = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const name = demoUsername.trim();
+        if (!name || demoLoading) return;
+
+        setDemoLoading(true);
+        setDemoError(null);
+
+        try {
+            const res = await fetch(`https://api.github.com/users/${encodeURIComponent(name)}`, {
+                headers: { Accept: 'application/vnd.github.v3+json' },
+            });
+            if (res.status === 404) {
+                setDemoError('User not found.');
+                setDemoLoading(false);
+                return;
+            }
+            if (!res.ok) {
+                setDemoError('GitHub API error. Try again.');
+                setDemoLoading(false);
+                return;
+            }
+            const data = await res.json();
+            onTryDemo(data.login); // Use canonical casing from API
+        } catch {
+            setDemoError('Network error. Try again.');
+        } finally {
+            setDemoLoading(false);
+        }
+    };
+
     return (
-        <section className="relative pt-32 pb-20 px-6 overflow-hidden min-h-[90vh] flex items-center">
+        <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 overflow-hidden min-h-[90vh] flex items-center">
             {/* Grid background */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#30363d_1px,transparent_1px),linear-gradient(to_bottom,#30363d_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-20 pointer-events-none" />
 
@@ -119,14 +158,14 @@ function Hero({ onSignUp }: { onSignUp: () => void }) {
                             <span className="text-xs font-mono text-[#8b949e]">v2.0 is live</span>
                         </div>
 
-                        <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight leading-tight mb-6">
+                        <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-white tracking-tight leading-tight mb-4 sm:mb-6">
                             You Ain&apos;t <br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#39d353] to-[#2ea043]">
                                 Better.
                             </span>
                         </h1>
 
-                        <p className="text-lg md:text-xl text-[#8b949e] mb-8 max-w-xl leading-relaxed">
+                        <p className="text-base sm:text-lg md:text-xl text-[#8b949e] mb-6 sm:mb-8 max-w-xl leading-relaxed">
                             The competitive GitHub developer analytics tool. Connect your PAT,
                             add your rivals, and prove your dominance with year-over-year
                             stats, activity feeds, and 1v1 arena battles.
@@ -148,7 +187,41 @@ function Hero({ onSignUp }: { onSignUp: () => void }) {
                             </a>
                         </div>
 
-                        <div className="mt-10 flex items-center gap-6 text-sm text-[#8b949e] font-mono">
+                        {/* Demo Mode Entry */}
+                        <div className="mt-8 pt-6 border-t border-[#21262d]">
+                            <p className="text-xs font-mono text-[#8b949e] mb-3 flex items-center gap-2">
+                                <Eye className="w-3.5 h-3.5 text-[#58a6ff]" />
+                                Try it without signing up
+                            </p>
+                            <form onSubmit={handleTryDemo} className="flex gap-2 max-w-sm">
+                                <div className="relative flex-1">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#484f58] text-sm font-mono">@</span>
+                                    <input
+                                        type="text"
+                                        value={demoUsername}
+                                        onChange={(e) => { setDemoUsername(e.target.value); setDemoError(null); }}
+                                        placeholder="username"
+                                        className="w-full pl-8 pr-3 py-2.5 text-sm bg-[#0d1117] border border-[#30363d] rounded-md text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#58a6ff] focus:border-[#58a6ff] placeholder:text-[#484f58] transition-colors"
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={!demoUsername.trim() || demoLoading}
+                                    className="px-4 py-2.5 text-sm font-medium text-white bg-[#21262d] hover:bg-[#30363d] rounded-md border border-[#30363d] transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                                >
+                                    {demoLoading ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        'Try Demo'
+                                    )}
+                                </button>
+                            </form>
+                            {demoError && (
+                                <p className="text-xs text-red-400 mt-2 font-mono">{demoError}</p>
+                            )}
+                        </div>
+
+                        <div className="mt-8 flex items-center gap-6 text-sm text-[#8b949e] font-mono">
                             <div className="flex items-center gap-2">
                                 <Swords className="w-4 h-4 text-[#39d353]" />
                                 <span>1v1 Arena</span>
@@ -619,12 +692,12 @@ function FooterSection() {
 // Main Landing Page
 // ========================
 
-export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
+export function LandingPage({ onSignIn, onSignUp, onTryDemo }: LandingPageProps) {
     return (
         <div className="min-h-screen bg-[#0d1117] text-[#c9d1d9] font-sans selection:bg-[#39d353]/30 selection:text-white">
             <Navbar onSignIn={onSignIn} />
             <main>
-                <Hero onSignUp={onSignUp} />
+                <Hero onSignUp={onSignUp} onTryDemo={onTryDemo} />
                 <Features />
                 <HowItWorks />
                 <CtaSection onSignUp={onSignUp} />

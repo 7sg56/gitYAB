@@ -27,7 +27,7 @@ function setMemoryEventsCache(key: string, data: GitHubEvent[]) {
 const inFlightEventFetches = new Map<string, Promise<GitHubEvent[]>>();
 
 export function useGitHubEvents(usernames: string[]) {
-    const { pat, setApiError } = useGitStore();
+    const { pat, setApiError, isDemoMode } = useGitStore();
     const [events, setEvents] = useState<GitHubEvent[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
@@ -38,7 +38,11 @@ export function useGitHubEvents(usernames: string[]) {
     const fetchData = useCallback(async (forceRefresh = false, pageNum = 1) => {
         await Promise.resolve();
         const currentUsers = usernamesKey ? usernamesKey.split(',') : [];
-        if (!pat || currentUsers.length === 0) {
+        if (!isDemoMode && !pat) {
+            setEvents([]);
+            return;
+        }
+        if (currentUsers.length === 0) {
             setEvents([]);
             return;
         }
@@ -75,7 +79,7 @@ export function useGitHubEvents(usernames: string[]) {
                 const fetchKey = `${username}_${pageNum}`;
                 let fetchPromise = inFlightEventFetches.get(fetchKey);
                 if (!fetchPromise) {
-                    fetchPromise = fetchGitHubEvents(username, pat, pageNum);
+                    fetchPromise = fetchGitHubEvents(username, pat || undefined, pageNum);
                     inFlightEventFetches.set(fetchKey, fetchPromise);
                 }
 
@@ -140,7 +144,7 @@ export function useGitHubEvents(usernames: string[]) {
 
         if (pageNum === 1) setLoading(false);
         else setIsLoadingMore(false);
-    }, [usernamesKey, pat, setApiError]);
+    }, [usernamesKey, pat, isDemoMode, setApiError]);
 
     const rescan = useCallback(() => {
         clearCache('events_1'); // Note: doesn't clear all pages, but typically enough

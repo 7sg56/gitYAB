@@ -15,18 +15,50 @@ import { Graphs } from '@/components/Graphs';
 import { SocialGraph } from '@/components/SocialGraph';
 import { Arena } from '@/components/Arena';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { DemoBanner } from '@/components/DemoBanner';
+import { DemoUpgradeModal } from '@/components/DemoUpgradeModal';
 import { useGitStore, useAuthSync } from '@/store/useGitStore';
-
-type AuthView = null | 'signin' | 'signup';
 
 export default function Home() {
     const auth = useAuthSync();
-    const { currentView, apiError, setApiError, isLoading } = useGitStore();
-    const [authView, setAuthView] = useState<AuthView>(null);
+    const { currentView, apiError, setApiError, isLoading, isDemoMode, enterDemoMode, exitDemoMode, authView, setAuthView } = useGitStore();
+    const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
     // Wait only for Clerk to initialize
     if (!auth.isLoaded) {
         return <LoadingScreen message="Initializing..." />;
+    }
+
+    // Demo mode: show the full app shell without Clerk auth
+    if (isDemoMode) {
+        return (
+            <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
+                <DemoBanner />
+                {apiError && (
+                    <div className="flex-none bg-danger/10 border-b border-danger/20 px-4 py-2 flex items-center justify-between z-[60]">
+                        <p className="text-xs text-danger/90 font-medium">{apiError}</p>
+                        <button onClick={() => setApiError(null)} className="text-danger/70 hover:text-danger text-xs px-2 py-0.5 rounded hover:bg-danger/10 transition-colors">Dismiss</button>
+                    </div>
+                )}
+                <div className="flex flex-1 min-h-0 bg-background overflow-hidden w-full">
+                    <Sidebar />
+                    <main className="flex-1 overflow-y-auto custom-scrollbar pb-16 md:pb-0">
+                        {currentView === 'home' && <Dashboard />}
+                        {currentView === 'graphs' && <Graphs />}
+                        {currentView === 'feed' && <Feed />}
+                        {currentView === 'comparator' && <Comparator />}
+                        {currentView === 'arena' && <Arena />}
+                        {currentView === 'target' && <TargetRival />}
+                        {/* Social graph is disabled in demo mode */}
+                    </main>
+                    {currentView !== 'social' && <RivalsPanel />}
+                </div>
+                <DemoUpgradeModal
+                    open={upgradeModalOpen}
+                    onClose={() => setUpgradeModalOpen(false)}
+                />
+            </div>
+        );
     }
 
     // Unauthenticated flow: landing page or auth forms
@@ -46,6 +78,7 @@ export default function Home() {
                 <LandingPage
                     onSignIn={() => setAuthView('signin')}
                     onSignUp={() => setAuthView('signup')}
+                    onTryDemo={(username) => enterDemoMode(username)}
                 />
             )
         );
@@ -68,7 +101,7 @@ export default function Home() {
             <div className="flex flex-1 min-h-0 bg-background overflow-hidden w-full">
                 <SetupModal />
                 <Sidebar />
-                <main className="flex-1 overflow-y-auto custom-scrollbar">
+                <main className="flex-1 overflow-y-auto custom-scrollbar pb-16 md:pb-0">
                     {currentView === 'home' && <Dashboard />}
                     {currentView === 'graphs' && <Graphs />}
                     {currentView === 'feed' && <Feed />}

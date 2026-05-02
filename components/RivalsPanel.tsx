@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useGitStore } from '@/store/useGitStore';
+import { useGitStore, DEMO_RIVAL_LIMIT } from '@/store/useGitStore';
 import { Plus, X, Eye, EyeOff, Users, PanelRightClose, PanelRightOpen, RefreshCw, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGitHubStats } from '@/hooks/useGitHubStats';
@@ -10,7 +10,7 @@ import Image from 'next/image';
 export function RivalsPanel() {
     const {
         mainUser, rivals, addRival, removeRival, toggleRival, enabledRivals,
-        rightPanelOpen, setRightPanelOpen, currentView
+        rightPanelOpen, setRightPanelOpen, currentView, isDemoMode, requestDemoAuth
     } = useGitStore();
 
     useEffect(() => {
@@ -55,10 +55,24 @@ export function RivalsPanel() {
 
     return (
         <>
+            {/* Backdrop overlay for mobile/tablet */}
+            {rightPanelOpen && (
+                <div 
+                    className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[50] lg:hidden"
+                    onClick={() => setRightPanelOpen(false)}
+                />
+            )}
+            
             <div
                 className={cn(
-                    "h-full bg-card flex flex-col shrink-0 transition-all duration-300 ease-in-out overflow-hidden border-border",
-                    rightPanelOpen ? "w-72 border-l" : "w-0 border-l-0"
+                    // Base styles
+                    "bg-card flex flex-col shrink-0 transition-all duration-300 ease-in-out overflow-hidden z-[60]",
+                    // Desktop styles (lg+)
+                    "lg:h-full lg:static",
+                    rightPanelOpen ? "lg:w-72 lg:border-l border-border" : "lg:w-0 lg:border-l-0",
+                    // Mobile styles (< lg)
+                    "fixed right-0 top-0 bottom-0 w-72 border-l border-border shadow-2xl lg:shadow-none",
+                    rightPanelOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"
                 )}
             >
                 <div className="w-72 h-full flex flex-col shrink-0">
@@ -93,6 +107,19 @@ export function RivalsPanel() {
 
                     {/* Add rival */}
                     <div className="px-3 py-3 border-b border-border">
+                        {isDemoMode && rivals.length >= DEMO_RIVAL_LIMIT ? (
+                            <div className="text-center py-2 space-y-2">
+                                <p className="text-xs text-amber-400/80">
+                                    Demo limit: {DEMO_RIVAL_LIMIT} rival max.
+                                </p>
+                                <button
+                                    onClick={() => requestDemoAuth('signup')}
+                                    className="text-xs font-medium text-[#58a6ff] hover:text-white hover:underline transition-colors"
+                                >
+                                    Sign up for unlimited rivals
+                                </button>
+                            </div>
+                        ) : (
                         <form onSubmit={handleAdd} className="flex gap-2">
                             <input
                                 type="text"
@@ -110,6 +137,7 @@ export function RivalsPanel() {
                                 {isAdding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                             </button>
                         </form>
+                        )}
                     </div>
 
                     {/* Rivals list */}
