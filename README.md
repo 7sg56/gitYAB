@@ -2,6 +2,8 @@
 
 **YAB -- You Ain't Better.** A rival analysis tool for GitHub developers. Compare your stats against competitors and prove who codes harder.
 
+![GitYAB Dashboard](public/demo-preview.png)
+
 ## Features
 
 ### Overview
@@ -10,6 +12,9 @@
 - **Comparison Charts** -- bar charts comparing contributions (commits, PRs, issues) and reach (stars, followers, repos) against enabled rivals
 
 ### Activity
+
+![GitYAB Activity](public/activity.png)
+
 - **Event Timeline** -- chronological feed of your rivals' recent GitHub activity
 - **Event Types** -- PushEvent, PullRequestEvent, IssuesEvent, IssueCommentEvent, CreateEvent, ForkEvent, WatchEvent, DeleteEvent, PullRequestReviewEvent
 - **Rich Details** -- commit messages, branch names, PR/issue titles, and timestamps
@@ -24,6 +29,13 @@
 - **Current Target** -- identify the immediate rival to overtake
 - **Gap Tracking** -- see how many commits/PRs needed to climb the ranks
 - **Victory Display** -- trophy banner when you're on top of all rivals
+
+### Arena
+
+![GitYAB Arena](public/arena.png)
+
+- **1v1 Showdowns** -- go head-to-head against your toughest rivals in a dramatic matchup
+- **Visual Domination** -- see precisely where you outrank your opponent and where you fall short
 
 ### Other Features
 - **Smart Caching** -- stats cached for 10 minutes, events for 5 minutes
