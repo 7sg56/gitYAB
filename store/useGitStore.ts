@@ -130,7 +130,7 @@ export const useGitStore = create<GitState>()(
             refreshAuthState: async () => {
                 if (isRefreshing) return;
                 isRefreshing = true;
-                set({ isLoading: true });
+
                 try {
                     const clerkUserId = get().clerkUserId;
 
@@ -149,18 +149,32 @@ export const useGitStore = create<GitState>()(
                     // Clean up any legacy encryption keys from localStorage
                     cleanupLegacyKeys(clerkUserId);
 
-                    // Sync everything from DB in one parallel batch.
-                    // This replaces the old hasCompletedSetup() -> syncFromDatabase()
-                    // sequential waterfall that was causing 2x /api/pat cold starts.
-                    await get().syncFromDatabase();
+                    // If we have persisted data from a previous session, render
+                    // immediately and sync in the background.  This avoids
+                    // blocking on the /api/pat cold start for returning users.
+                    const { pat: existingPat, mainUser: existingUser } = get();
+                    const hasCachedData = !!(existingPat && existingUser);
 
-                    // Determine setup completion from the data we just synced
-                    const { pat, mainUser } = get();
-                    set({ hasSetupCompleted: !!(pat && mainUser) });
+                    if (hasCachedData) {
+                        // Let the UI render right away with cached data
+                        set({ hasSetupCompleted: true, isLoading: false });
+                        // Background sync -- don't await
+                        get().syncFromDatabase().then(() => {
+                            const { pat, mainUser } = get();
+                            set({ hasSetupCompleted: !!(pat && mainUser) });
+                        }).catch(() => {});
+                    } else {
+                        // First visit or no cached data -- must block
+                        set({ isLoading: true });
+                        await get().syncFromDatabase();
+                        const { pat, mainUser } = get();
+                        set({ hasSetupCompleted: !!(pat && mainUser), isLoading: false });
+                    }
                 } catch (error) {
                     console.error('Error refreshing auth state:', error);
+                    set({ isLoading: false });
                 } finally {
-                    set({ isLoading: false, isAuthenticating: false });
+                    set({ isAuthenticating: false });
                     isRefreshing = false;
                 }
             },
@@ -299,6 +313,13 @@ export const useGitStore = create<GitState>()(
             partialize: (state) => ({
                 currentView: state.currentView,
                 lastScanTimestamp: state.lastScanTimestamp,
+                // Persist auth-critical data so returning users skip the
+                // blocking Supabase + /api/pat cold start waterfall.
+                pat: state.pat,
+                mainUser: state.mainUser,
+                hasSetupCompleted: state.hasSetupCompleted,
+                rivals: state.rivals,
+                enabledRivals: state.enabledRivals,
             }),
         }
     )
