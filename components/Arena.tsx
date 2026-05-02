@@ -24,8 +24,6 @@ const BATTLE_METRICS = [
     { key: 'totalRepos', label: 'Repositories', short: 'Repos' },
 ] as const;
 
-type MetricKey = typeof BATTLE_METRICS[number]['key'];
-
 export function Arena() {
     const { mainUser, rivals, enabledRivals } = useGitStore();
     const activeRivals = useMemo(
